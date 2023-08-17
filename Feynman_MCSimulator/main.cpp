@@ -17,6 +17,7 @@ using namespace std::chrono;
 
 #include "circuit.h"
 #include "all_paths.hpp"
+#include "IS_paths.hpp"
 
 static bool check_command_line(int, const char * []);
 
@@ -26,9 +27,11 @@ static const char *fileName;
 static unsigned long long init_state, final_state;
 static bool loop_init_states, loop_final_states;
 static int n_threads=1;
+static unsigned long long n_samples=1ull<<20;
 
 enum TAlgorithms {
-    ALL_PATHS=1
+    ALL_PATHS=1,
+    IS_FORWARD=2
 } ;
 
 static TAlgorithms algorithm;
@@ -89,6 +92,10 @@ int main(int argc, const char * argv[]) {
                     ret = all_paths (circuit, init_state, final_state, estimateR, estimateI, n_threads);
                     break;
                     
+                case IS_FORWARD:
+                    ret = IS_paths (circuit, init_state, final_state, n_samples, estimateR, estimateI, n_threads);
+                    break;
+                    
                 default:
                     break;
             }
@@ -139,6 +146,9 @@ static bool check_command_line(int argc, const char * argv[]) {
         case 1:    // ALL_PATHS
             algorithm = ALL_PATHS;
             break;
+        case 2:    // Importance Sampling FORWARD
+            algorithm = IS_FORWARD;
+            break;
         default:
             algorithm = ALL_PATHS;
             break;
@@ -171,5 +181,10 @@ static bool check_command_line(int argc, const char * argv[]) {
             n_threads=atoi(argv[5]);
         }
     }
+
+    if (argc>6) { // set the nbr of samples
+        n_samples = strtoull(argv[6], NULL, 10);
+    }
+
     return true;
 }

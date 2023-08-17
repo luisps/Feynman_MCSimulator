@@ -24,6 +24,13 @@ typedef struct {
     int qubit;
     float param;
     float m[2][2][2];  // note REAL and IMAG separated
+} TGate1P1_FDATA;    // 1 qubit, 1 parameter gate datatype (DATA READ FROM FILE)
+
+typedef struct {
+    TGate1P1_FDATA fdata;
+    // p(input->output) = pdf[output][input] = abs_squared(m[output][input])
+    // pre computed for efficiency
+    float pdf[2][2];
 } TGate1P1;    // 1 qubit, 1 parameter gate datatype
 
 typedef struct {
@@ -31,6 +38,17 @@ typedef struct {
     int c_qubit, t_qubit;
     float param;
     float m[4][4][2];  // note REAL and IMAG separated
+} TGate2P1_FDATA;    // 2 qubits, 1 parameter gate datatype (DATA READ FROM FILE)
+
+typedef struct {
+    TGate2P1_FDATA fdata;
+    // p(input->output) = pdf[output][input] = abs_squared(m[output][input])
+    // pre computed for efficiency
+    float pdf[4][4];
+    // cdf pre computed for efficiency
+    // NOTE: the cdf is transposed such that sampling an output for a given input uses a single row
+    //       transposition occurs in read_circuit()
+    float cdf[4][4];
 } TGate2P1;    // 2 qubits, 1 parameter gate datatype
 
 typedef struct {
@@ -53,5 +71,6 @@ typedef struct {
 TCircuit * read_circuit (const char *);
 
 void print_circuit (TCircuit *);
+void print_circuit_stats (TCircuit *);
 
 #endif /* circuit_h */

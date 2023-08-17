@@ -25,6 +25,7 @@ static bool check_command_line(int, const char * []);
 static const char *fileName;
 static unsigned long long init_state, final_state;
 static bool loop_init_states, loop_final_states;
+static int n_threads=1;
 
 enum TAlgorithms {
     ALL_PATHS=1
@@ -46,7 +47,9 @@ int main(int argc, const char * argv[]) {
     }
     else fprintf (stdout, "read_circuit() OK!\n");
     
-    //print_circuit (circuit);
+    print_circuit_stats (circuit);
+    fprintf(stdout, "\n");
+    fprintf(stderr, "\n");
     fflush(stderr);
     fflush(stdout);
     
@@ -83,7 +86,7 @@ int main(int argc, const char * argv[]) {
             // simulate
             switch (algorithm) {
                 case ALL_PATHS:
-                    ret = all_paths (circuit, init_state, final_state, estimateR, estimateI);
+                    ret = all_paths (circuit, init_state, final_state, estimateR, estimateI, n_threads);
                     break;
                     
                 default:
@@ -106,8 +109,13 @@ int main(int argc, const char * argv[]) {
             
             // To get the value of duration use the count()
             // member function on the duration object
-            cout << duration.count() << " us!" << endl;
-            
+            if (duration.count() <= 1000)
+                fprintf (stdout, "T = %lld us\n", duration.count());
+            else if (duration.count() <= 1e6)
+                fprintf (stdout, "T = %.1f ms\n", ((float)duration.count())/1000.f);
+            else
+                fprintf (stdout, "T = %.1f s\n", ((float)duration.count())/1000000.f);
+
         } // iterate over final_states
     }  // iterate over init_states
     
@@ -155,5 +163,13 @@ static bool check_command_line(int argc, const char * argv[]) {
         final_state = strtoull(argv[4], NULL, 10);
     }
 
+    if (argc>5) {
+        if (argv[5][0]=='a')  { // autonomously set the nbr of threads
+            n_threads=1;
+        }
+        else {
+            n_threads=atoi(argv[5]);
+        }
+    }
     return true;
 }

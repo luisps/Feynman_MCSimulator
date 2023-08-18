@@ -185,6 +185,9 @@ static bool check_command_line(int argc, const char * argv[]) {
     if (argc>6) { // set the nbr of samples
         n_samples = strtoull(argv[6], NULL, 10);
     }
+    else {
+        fprintf (stderr, "Number of samples not specified in command line. Defaulting to %llu\n", n_samples);
+    }
 
     return true;
 }

@@ -8,6 +8,7 @@
 #include "IS_paths.hpp"
 #include <thread>
 #include <vector>
+#include <random>
 
 #include "complex.h"
 #include "layer.hpp"
@@ -79,6 +80,12 @@ static bool IS_paths_NOVEC_T (TCircuit *c,
                 unsigned long long init_state, unsigned long long final_state, const unsigned long long n_samples,
                               float &sumR, float &sumI, int& non_zero_paths) {
     
+    // thread local random number generator (seeded by a local random device)
+    // see https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2013/n3551.pdf
+    std::random_device rdev{};
+    thread_local std::default_random_engine e{rdev()};
+    std::uniform_real_distribution<float>d{0.0,1.0};  // uniform distribution in[0,1[ (float)
+    
     unsigned long long s;   // sample counter
     int l;                  // layer counter
     
@@ -106,7 +113,7 @@ static bool IS_paths_NOVEC_T (TCircuit *c,
             
             // sample this layer for the current state,
             // returning the amplitude, pdf and next state
-            pdf = layer_sample (layer, l, current_state, next_state, wR, wI);
+            pdf = layer_sample (layer, l, current_state, next_state, wR, wI, e, d);
             
             if (complex_abs_square(wR, wI) <= 0.f || pdf <= 0.f) {  // I believe this should never happen
                 zero_power_transition = true;

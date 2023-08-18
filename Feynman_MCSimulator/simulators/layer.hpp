@@ -9,6 +9,7 @@
 #define layer_hpp
 
 #include <stdio.h>
+#include <random>
 
 #include "circuit.h"
 #include "gates.h"
@@ -20,6 +21,7 @@ void layer_w (TCircuitLayer *layer, int l,
 
 float layer_sample (TCircuitLayer* layer, int l, unsigned long long current_state,
                     unsigned long long& next_state,
-                    float& wR, float& wI);
+                    float& wR, float& wI,
+                    std::default_random_engine e, std::uniform_real_distribution<float>& d);
 
 #endif /* layer_hpp */

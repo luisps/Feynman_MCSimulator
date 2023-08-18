@@ -10,6 +10,7 @@
 #include <vector>
 
 #include "complex.h"
+#include "layer.hpp"
 
 static bool IS_paths_NOVEC_T (TCircuit *c,
                 unsigned long long init_state, unsigned long long final_state, const unsigned long long n_samples,
@@ -22,8 +23,6 @@ bool IS_paths (TCircuit *c, unsigned long long init_state,
     
     bool ret=true;
     int non_zero_paths = 0;
-    // compute NBR_STATES : the number of states to iterate in each intermediate state layer
-    const unsigned long long NBR_STATES = 1 << c->size->num_qubits;
     float sumR=0.f, sumI=0.f;
 
     
@@ -94,7 +93,7 @@ static bool IS_paths_NOVEC_T (TCircuit *c,
         float path_wR=1.f, path_wI = 0.f;
         bool zero_power_transition = false;
         
-        unsigned long long next_state, current_state = init_state;  // state before the next layer
+        unsigned long long next_state=0ull, current_state = init_state;  // state before the next layer
         
         // generate the path by stochastically sampling each layer from l=0 to l=L-2
         // the last layer (l=L-1) is handled outside the 'for' loop since it is deterministically
@@ -128,9 +127,8 @@ static bool IS_paths_NOVEC_T (TCircuit *c,
             // get gate layer L-l
             TCircuitLayer *layer = &c->layers[L-l];
             
-            // sample this layer for the current state,
-            // returning the amplitude, pdf and next state
-            layer_w (layer, L-1, current_state, next_state, wR, wI);
+            // evaluate this layer amplitude thansitioning from the current state to final state
+            layer_w (layer, L-1, current_state, final_state, wR, wI);
 
             if (complex_abs_square(wR, wI) <= 0.f) {  // This will happen frfequently
                 zero_power_transition = true;

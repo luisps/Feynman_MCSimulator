@@ -131,7 +131,7 @@ void layer_w (TCircuitLayer *layer, int l,
 float layer_sample (TCircuitLayer* layer, int l, unsigned long long current_state,
                     unsigned long long& next_state,
                     float& wR, float& wI,
-                    std::default_random_engine e, std::uniform_real_distribution<float>& d) {
+                    std::default_random_engine& e, std::uniform_real_distribution<float>& d) {
     
     float lwR = 1.f, lwI = 0.f, pdf=1.f;
     unsigned long long lnext_state=0ull;
@@ -145,6 +145,12 @@ float layer_sample (TCircuitLayer* layer, int l, unsigned long long current_stat
         const int curr_state_qb = qb_value(qb_nbr, current_state);
         //if (print_debug) fprintf (stderr, "\tcurr: qb_nbr = %d -> qb=%d\n",qb_nbr, curr_state_qb);
         const float rnd = d(e);  // generate random nbr in [0, 1[
+        
+        bool debug = false;
+        
+        if (debug) {
+            fprintf(stderr, "\t\trnd = %f\n", rnd);
+        }
 
         int next_state_qb = 0;
 

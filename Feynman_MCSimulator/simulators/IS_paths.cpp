@@ -100,30 +100,55 @@ static bool IS_paths_NOVEC_T (TCircuit *c,
         float path_wR=1.f, path_wI = 0.f;
         bool zero_power_transition = false;
         
+        bool debug=false;
+        
         unsigned long long next_state=0ull, current_state = init_state;  // state before the next layer
+        
+        if (debug) fprintf(stderr, "Sample: %llu out of %llu\n", s, n_samples);
         
         // generate the path by stochastically sampling each layer from l=0 to l=L-2
         // the last layer (l=L-1) is handled outside the 'for' loop since it is deterministically
         // connected to 'final_state'
-        for (l=0 ; l< L-2 && !zero_power_transition ; l++) {
+        for (l=0 ; l< L-1 && !zero_power_transition ; l++) {
             float wR, wI, pdf;
             
+            if (debug) {
+                fprintf(stderr, "\tLayer: %d out of %d\n", l, L);
+                fprintf(stderr, "\tCurrent state: %llu\n", current_state);
+                fprintf(stderr, "\tLayer transition...\n");
+            }
+
             // get gate layer l
             TCircuitLayer *layer = &c->layers[l];
             
             // sample this layer for the current state,
             // returning the amplitude, pdf and next state
             pdf = layer_sample (layer, l, current_state, next_state, wR, wI, e, d);
-            
+
+            if (debug) {
+                fprintf(stderr, "\tLayer w: %f + j %f\n", wR, wI);
+                fprintf(stderr, "\tTransition p: %f\n", pdf);
+                fprintf(stderr, "\tNext state: %llu\n", next_state);
+            }
+
             if (complex_abs_square(wR, wI) <= 0.f || pdf <= 0.f) {  // I believe this should never happen
                 zero_power_transition = true;
+                if (debug) {
+                    fprintf(stderr, "\tFinishing sample\n");
+                }
             }
             else {
                 path_pdf *= pdf;
                 complex_multiply (path_wR, path_wI, path_wR, path_wI, wR, wI);
+                if (debug) {
+                    fprintf(stderr, "\tPath w up to now: %f + j %f\n", path_wR, path_wI);
+                    fprintf(stderr, "\tPath Transition p: %f\n", path_pdf);
+                }
+
             }
             
             current_state = next_state;
+            if (debug) fprintf (stderr,"....\n");
 
         }  // layers 0 .. L-2 done
         
@@ -131,17 +156,34 @@ static bool IS_paths_NOVEC_T (TCircuit *c,
         if (!zero_power_transition) { // path still contributes (I believer it always will)
             float wR, wI;
             
+            if (debug) {
+                fprintf(stderr, "\tLast Layer out of %d\n", L);
+                fprintf(stderr, "\tCurrent state: %llu\n", current_state);
+                fprintf(stderr, "\tFinal state: %llu\n", final_state);
+                fprintf(stderr, "\tLayer deterministic transition...\n");
+            }
             // get gate layer L-l
             TCircuitLayer *layer = &c->layers[L-l];
             
             // evaluate this layer amplitude thansitioning from the current state to final state
             layer_w (layer, L-1, current_state, final_state, wR, wI);
 
+            if (debug) {
+                fprintf(stderr, "\tLast Layer w: %f + j %f\n", wR, wI);
+            }
+
             if (complex_abs_square(wR, wI) <= 0.f) {  // This will happen frfequently
                 zero_power_transition = true;
+                if (debug) {
+                    fprintf(stderr, "\tFinishing sample\n");
+                }
             }
             else {
                 complex_multiply (path_wR, path_wI, path_wR, path_wI, wR, wI);
+                if (debug) {
+                    fprintf(stderr, "\tPath final w : %f + j %f\n", path_wR, path_wI);
+                    fprintf(stderr, "\tPath Transition p: %f\n", path_pdf);
+                }
             }
 
         }
@@ -155,8 +197,17 @@ static bool IS_paths_NOVEC_T (TCircuit *c,
             // accumulate on local sums
             l_sumR += path_contR;
             l_sumI += path_contI;
-            
+            if (debug) {
+                fprintf(stderr, "\tPath contribution : %f + j %f\n", path_contR, path_contI);
+                fprintf(stderr, "\tSamples sum: %f + j %f\n", l_sumR, l_sumI);
+            }
+
         }
+        // next sample
+        if (debug) {
+            fprintf(stderr, "\n");
+        }
+
     } // end iterating over samples
     
     non_zero_paths = l_non_zero_paths;

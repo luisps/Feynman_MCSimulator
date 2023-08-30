@@ -94,13 +94,13 @@ static bool IS_paths_NOVEC_T (TCircuit *c,
     
     const int L = c->size->num_layers;   // number of layers in the circuit
     
+    bool debug=false;
+    
     // iteratively generate samples
     for (s=0ull; s<n_samples ; s++) {
         float path_pdf= 1.f;
         float path_wR=1.f, path_wI = 0.f;
         bool zero_power_transition = false;
-        
-        bool debug=false;
         
         unsigned long long next_state=0ull, current_state = init_state;  // state before the next layer
         
@@ -162,11 +162,28 @@ static bool IS_paths_NOVEC_T (TCircuit *c,
                 fprintf(stderr, "\tFinal state: %llu\n", final_state);
                 fprintf(stderr, "\tLayer deterministic transition...\n");
             }
-            // get gate layer L-l
-            TCircuitLayer *layer = &c->layers[L-l];
             
+            TCircuitLayer *last_layer;
+            /*fprintf (stderr, "VERIFFICATION OF ALL LAYERS\n");
+            for (int lll=0 ; lll<L ; lll++){
+                // get gate layer L-l
+                last_layer = &c->layers[lll];
+
+                fprintf (stderr, "Layer verification: %d out of %d with %d gates", lll, L, last_layer->num_gates);
+                for (int gg=0 ; gg<last_layer->num_type_gates[0] ; gg++) {
+                    fprintf (stderr, "> gate %d ", (((TGate1P0 *) last_layer->gates[0])[gg]).name);
+                }
+                fprintf(stderr, "\n");
+            }*/
+            
+            //fprintf (stderr, "CALLING print_circuit...\n");
+            //print_circuit(c);
+            //fprintf (stderr, "... print_circuit DONE...\n");
+
+            last_layer = &c->layers[L-1];
+
             // evaluate this layer amplitude thansitioning from the current state to final state
-            layer_w (layer, L-1, current_state, final_state, wR, wI);
+            layer_w (last_layer, L-1, current_state, final_state, wR, wI);
 
             if (debug) {
                 fprintf(stderr, "\tLast Layer w: %f + j %f\n", wR, wI);

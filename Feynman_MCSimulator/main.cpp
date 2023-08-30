@@ -50,6 +50,7 @@ int main(int argc, const char * argv[]) {
     }
     else fprintf (stdout, "read_circuit() OK!\n");
     
+    //print_circuit(circuit);
     print_circuit_stats (circuit);
     fprintf(stdout, "\n");
     fprintf(stderr, "\n");
@@ -103,7 +104,7 @@ int main(int argc, const char * argv[]) {
             // https://www.geeksforgeeks.org/measure-execution-time-function-cpp/
             auto stop = high_resolution_clock::now();
             
-            fprintf (stdout,"< %llu | U | %llu> = %f + i %f \t", init_state, final_state, estimateR, estimateI);
+            fprintf (stdout,"< %llu | U | %llu> = %f + i %f \t", final_state, init_state, estimateR, estimateI);
             
             
             // https://www.geeksforgeeks.org/measure-execution-time-function-cpp/
@@ -185,7 +186,7 @@ static bool check_command_line(int argc, const char * argv[]) {
     if (argc>6) { // set the nbr of samples
         n_samples = strtoull(argv[6], NULL, 10);
     }
-    else {
+    else if (algorithm==IS_FORWARD) {
         fprintf (stderr, "Number of samples not specified in command line. Defaulting to %llu\n", n_samples);
     }
 

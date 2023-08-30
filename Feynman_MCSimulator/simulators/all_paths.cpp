@@ -32,6 +32,14 @@ bool all_paths (TCircuit *c, unsigned long long init_state,
     const unsigned long long NBR_STATES = 1 << c->size->num_qubits;
     
 
+    // all_paths currently requires at least 4 layers
+    // terminate otherwise
+    if (c->size->num_layers<4) {
+        fprintf (stderr, "all_paths currently requires at least 4 layers!\n");
+        fprintf (stderr, "The specified circuit has %d < 4 layers! Terminating!\n\n", c->size->num_layers);
+        estimateR = estimateI =0.f;
+        return false;
+    }
     
     
     if (n_threads<=1) {
@@ -114,8 +122,6 @@ static bool all_paths_NOVEC_T (TCircuit *c,
     
     // outer most for loop
     for (ndxs[0]=l0_init; ndxs[0]<l0_finish ; ndxs[0]++) {
-        //fprintf (stderr, "ndxs[0]=%llu\n", ndxs[0]);
-        //fflush(stderr);
         
         // initialize all our L-3 loop counters (excludes ndxs[0])
         for (int l=1 ; l< (L-2) ; l++) ndxs[l] = 0ull;
@@ -141,7 +147,8 @@ static bool all_paths_NOVEC_T (TCircuit *c,
             layer_w (layer, 0, current_state, ndxs[0], wR, wI);
             
             if (complex_abs_square(wR, wI) <= 0.) {
-                break;
+                ///// VERIFY THIS
+                continue;
             }
 
             

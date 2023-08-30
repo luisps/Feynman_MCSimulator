@@ -159,7 +159,7 @@ inline void gate_cx_w (int i_qbs, int o_qbs, float &wR, float &wI) {
 }
 
 inline float gate_cx_sample (int i_qbs, const float rnd, int& o_qbs, float &wR, float &wI) {
-    o_qbs = ((i_qbs==0) || (i_qbs==2) ? i_qbs : (i_qbs==1 ? 3 : 1));
+    o_qbs = (i_qbs<2  ? i_qbs : (i_qbs==2 ? 3 : 2));
     wR = 1.f;
     wI = 0.f;
     return 1.f;
@@ -190,7 +190,7 @@ inline void gate_g2p1_w (int i_qbs, int o_qbs,  float m[4][4][2], float &wR, flo
 // G2P1 gates attached 4x4 unitary is used
 inline float gate_g2p1_sample (int i_qbs, const float rnd, int& o_qbs, float m[4][4][2], float pdf[4][4], float cdf[4][4], float &wR, float &wI) {
     o_qbs=0;
-    while (rnd < cdf[i_qbs][o_qbs]) o_qbs++;   // remember: cdf is transposed
+    while (rnd > cdf[i_qbs][o_qbs]) o_qbs++;   // remember: cdf is transposed
     o_qbs = (o_qbs < 4 ? o_qbs : 3);   // shouldn't be required
     //input selects the column
     // output selects the row

@@ -7,7 +7,9 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		620E01BC2A78534D004C06E9 /* all_paths.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 620E01BA2A78534D004C06E9 /* all_paths.cpp */; };
+		6292403D2A8EAFE00078A502 /* all_paths.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 6292403B2A8EAFE00078A502 /* all_paths.cpp */; };
+		6292403E2A8EAFE00078A502 /* IS_paths.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 6292403C2A8EAFE00078A502 /* IS_paths.cpp */; };
+		629F53CE2A8F814800675551 /* layer.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 629F53CC2A8F814800675551 /* layer.cpp */; };
 		62F5D0742A76E9380022FB48 /* main.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 62F5D0732A76E9380022FB48 /* main.cpp */; };
 		62F5D07C2A76EAE80022FB48 /* circuit.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 62F5D07B2A76EAE80022FB48 /* circuit.cpp */; };
 /* End PBXBuildFile section */
@@ -25,10 +27,17 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
-		620E01BA2A78534D004C06E9 /* all_paths.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = all_paths.cpp; sourceTree = "<group>"; };
-		620E01BB2A78534D004C06E9 /* all_paths.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = all_paths.hpp; sourceTree = "<group>"; };
 		62303BD42A7992A100F5A060 /* gates.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = gates.h; sourceTree = "<group>"; };
+		627EAF7B2AA3660700A93FFE /* path.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = path.h; sourceTree = "<group>"; };
+		629240392A8EAFE00078A502 /* IS_paths.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = IS_paths.hpp; sourceTree = "<group>"; };
+		6292403A2A8EAFE00078A502 /* all_paths.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; path = all_paths.hpp; sourceTree = "<group>"; };
+		6292403B2A8EAFE00078A502 /* all_paths.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = all_paths.cpp; sourceTree = "<group>"; };
+		6292403C2A8EAFE00078A502 /* IS_paths.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = IS_paths.cpp; sourceTree = "<group>"; };
+		629F53CC2A8F814800675551 /* layer.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = layer.cpp; sourceTree = "<group>"; };
+		629F53CD2A8F814800675551 /* layer.hpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.h; path = layer.hpp; sourceTree = "<group>"; };
 		62A04D082A7D594100D2B409 /* complex.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = complex.h; sourceTree = "<group>"; };
+		62BFF37E2A9FBEF9000D1BB7 /* csv.hpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.h; name = csv.hpp; path = "csv-parser/single_include/csv.hpp"; sourceTree = SOURCE_ROOT; };
+		62DB2B492A9F43C00091B2AC /* PreProcessorSettings.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = PreProcessorSettings.h; sourceTree = "<group>"; };
 		62F5D0702A76E9380022FB48 /* Feynman_MCSimulator */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = Feynman_MCSimulator; sourceTree = BUILT_PRODUCTS_DIR; };
 		62F5D0732A76E9380022FB48 /* main.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = main.cpp; sourceTree = "<group>"; };
 		62F5D07A2A76EA6B0022FB48 /* circuit.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = circuit.h; sourceTree = "<group>"; };
@@ -46,6 +55,19 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		629240382A8EAF810078A502 /* simulators */ = {
+			isa = PBXGroup;
+			children = (
+				6292403B2A8EAFE00078A502 /* all_paths.cpp */,
+				6292403A2A8EAFE00078A502 /* all_paths.hpp */,
+				6292403C2A8EAFE00078A502 /* IS_paths.cpp */,
+				629240392A8EAFE00078A502 /* IS_paths.hpp */,
+				629F53CC2A8F814800675551 /* layer.cpp */,
+				629F53CD2A8F814800675551 /* layer.hpp */,
+			);
+			path = simulators;
+			sourceTree = "<group>";
+		};
 		62F5D0672A76E9380022FB48 = {
 			isa = PBXGroup;
 			children = (
@@ -65,13 +87,15 @@
 		62F5D0722A76E9380022FB48 /* Feynman_MCSimulator */ = {
 			isa = PBXGroup;
 			children = (
+				62BFF37E2A9FBEF9000D1BB7 /* csv.hpp */,
+				629240382A8EAF810078A502 /* simulators */,
 				62F5D0732A76E9380022FB48 /* main.cpp */,
 				62F5D07A2A76EA6B0022FB48 /* circuit.h */,
 				62F5D07B2A76EAE80022FB48 /* circuit.cpp */,
-				620E01BA2A78534D004C06E9 /* all_paths.cpp */,
-				620E01BB2A78534D004C06E9 /* all_paths.hpp */,
 				62303BD42A7992A100F5A060 /* gates.h */,
 				62A04D082A7D594100D2B409 /* complex.h */,
+				62DB2B492A9F43C00091B2AC /* PreProcessorSettings.h */,
+				627EAF7B2AA3660700A93FFE /* path.h */,
 			);
 			path = Feynman_MCSimulator;
 			sourceTree = "<group>";
@@ -133,8 +157,10 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				6292403E2A8EAFE00078A502 /* IS_paths.cpp in Sources */,
 				62F5D0742A76E9380022FB48 /* main.cpp in Sources */,
-				620E01BC2A78534D004C06E9 /* all_paths.cpp in Sources */,
+				629F53CE2A8F814800675551 /* layer.cpp in Sources */,
+				6292403D2A8EAFE00078A502 /* all_paths.cpp in Sources */,
 				62F5D07C2A76EAE80022FB48 /* circuit.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

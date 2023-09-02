@@ -7,26 +7,32 @@
 
 #include "layer.hpp"
 #include <random>
+#include "PreProcessorSettings.h"
 
 void layer_w (TCircuitLayer *layer, int l,
                      unsigned long long current_state, unsigned long long next_state, float &wR, float &wI) {
     float lwR = 1.f, lwI = 0.f;
-    const bool debug = false;
 
-    if (debug) fprintf (stderr, "Evaluate layer %d with curr=%llu and next=%llu\n",l, current_state, next_state);
+#ifdef DEBUG
+    fprintf (stderr, "Evaluate layer %d with curr=%llu and next=%llu\n",l, current_state, next_state);
+#endif
     // Iterate over all gates G1P0
     for (int g=0 ; g<layer->num_type_gates[0] ; g++) {
         float gatewR, gatewI;
         TGate1P0 *gate = &(((TGate1P0 *) layer->gates[0])[g]);
         const int qb_nbr = gate->qubit;
         const int curr_state_qb = qb_value(qb_nbr, current_state);
-        if (debug) fprintf (stderr, "\tcurr: qb_nbr = %d -> qb=%d\n",qb_nbr, curr_state_qb);
-
+#ifdef DEBUG
+        fprintf (stderr, "\tcurr: qb_nbr = %d -> qb=%d\n",qb_nbr, curr_state_qb);
+#endif
+        
         const int next_state_qb = qb_value(qb_nbr, next_state);
-        if (debug) fprintf (stderr, "\tnext: qb_nbr = %d -> qb=%d\n",qb_nbr, next_state_qb);
-        if (debug) fprintf (stderr, "Current Layer Product = %f + i %f\n", lwR, lwI);
-        if (debug) fprintf (stderr, "Gate name = %d\n", gate->name);
-
+#ifdef DEBUG
+         fprintf (stderr, "\tnext: qb_nbr = %d -> qb=%d\n",qb_nbr, next_state_qb);
+         fprintf (stderr, "Current Layer Product = %f + i %f\n", lwR, lwI);
+         fprintf (stderr, "Gate name = %d\n", gate->name);
+#endif
+        
         switch (gate->name) {
             case 0:             // id
                 gate_id_w (curr_state_qb, next_state_qb, gatewR, gatewI);
@@ -53,9 +59,13 @@ void layer_w (TCircuitLayer *layer, int l,
                 gate_id_w (curr_state_qb, next_state_qb, gatewR, gatewI);
                 break;
         }
-        if (debug) fprintf (stderr, "Layer %d, gate %d, name %d, qubit %d, in %d, out %d -> %f +i %f\n", l, g, gate->name, qb_nbr, curr_state_qb, next_state_qb, gatewR, gatewI);
+#ifdef DEBUG
+        fprintf (stderr, "Layer %d, gate %d, name %d, qubit %d, in %d, out %d -> %f +i %f\n", l, g, gate->name, qb_nbr, curr_state_qb, next_state_qb, gatewR, gatewI);
+#endif
         complex_multiply (lwR, lwI, lwR, lwI, gatewR, gatewI);
-        if (debug) fprintf (stderr, "Layer Product = %f + i %f\n", lwR, lwI);
+#ifdef DEBUG
+        fprintf (stderr, "Layer Product = %f + i %f\n", lwR, lwI);
+#endif
     }  // end all gates G1P0
     // Iterate over all gates G1P1
     for (int g=0 ; g<layer->num_type_gates[1] ; g++) {
@@ -65,13 +75,12 @@ void layer_w (TCircuitLayer *layer, int l,
         const int curr_state_qb = qb_value(qb_nbr, current_state);
         const int next_state_qb = qb_value(qb_nbr, next_state);
   
-        if (debug) fprintf (stderr, "\tcurr: qb_nbr = %d -> qb=%d\n",qb_nbr, curr_state_qb);
-
-        if (debug) fprintf (stderr, "\tnext: qb_nbr = %d -> qb=%d\n",qb_nbr, next_state_qb);
-        if (debug) fprintf (stderr, "Current Layer Product = %f + i %f\n", lwR, lwI);
-        if (debug) fprintf (stderr, "Gate name = %d\n", gate->fdata.name);
-
-        
+#ifdef DEBUG
+        fprintf (stderr, "\tcurr: qb_nbr = %d -> qb=%d\n",qb_nbr, curr_state_qb);
+        fprintf (stderr, "\tnext: qb_nbr = %d -> qb=%d\n",qb_nbr, next_state_qb);
+        fprintf (stderr, "Current Layer Product = %f + i %f\n", lwR, lwI);
+        fprintf (stderr, "Gate name = %d\n", gate->fdata.name);
+#endif
         switch (gate->fdata.name) {
             case 11:            // rx
             case 12:            // ry
@@ -83,9 +92,13 @@ void layer_w (TCircuitLayer *layer, int l,
                 gate_id_w (curr_state_qb, next_state_qb, gatewR, gatewI);
                 break;
         }
-        if (debug) fprintf (stderr, "Layer %d, gate %d, name %d, qubit %d, in %d, out %d -> %f +i %f\n", l, g, gate->fdata.name, qb_nbr, curr_state_qb, next_state_qb, gatewR, gatewI);
+#ifdef DEBUG
+         fprintf (stderr, "Layer %d, gate %d, name %d, qubit %d, in %d, out %d -> %f +i %f\n", l, g, gate->fdata.name, qb_nbr, curr_state_qb, next_state_qb, gatewR, gatewI);
+#endif
         complex_multiply (lwR, lwI, lwR, lwI, gatewR, gatewI);
-        if (debug) fprintf (stderr, "Layer Product = %f + i %f\n", lwR, lwI);
+#ifdef DEBUG
+         fprintf (stderr, "Layer Product = %f + i %f\n", lwR, lwI);
+#endif
     }  // end all gates G1P1
     
     // Iterate over all gates G2P0
@@ -97,12 +110,12 @@ void layer_w (TCircuitLayer *layer, int l,
         const int curr_state_qbs = qb_value(c_qb_nbr, current_state)*2+qb_value(t_qb_nbr, current_state);
         const int next_state_qbs = qb_value(c_qb_nbr, next_state)*2+qb_value(t_qb_nbr, next_state);
 
-        if (debug) {
+#ifdef DEBUG
             fprintf (stderr, "\tcurr: c_qb_nbr = %d, t_qb_nbr = %d -> qbs=%d\n",c_qb_nbr,t_qb_nbr, curr_state_qbs);
             fprintf (stderr, "\tnext: qb=%d\n",next_state_qbs);
             fprintf (stderr, "Current Layer Product = %f + i %f\n", lwR, lwI);
             fprintf (stderr, "Gate name = %d\n", gate->name);
-        }
+#endif
         switch (gate->name) {
             case 20:             // id2
                 gate_id2_w (curr_state_qbs, next_state_qbs, gatewR, gatewI);
@@ -118,10 +131,11 @@ void layer_w (TCircuitLayer *layer, int l,
                 break;
         }
         complex_multiply (lwR, lwI, lwR, lwI, gatewR, gatewI);
-        if (debug) {
+#ifdef DEBUG
             fprintf (stderr, "Layer Product = %f + i %f\n", lwR, lwI);
             fprintf (stderr, "Layer %d, gate %d, name %d, in %d, out %d -> %f +i %f\n", l, g, gate->name, curr_state_qbs, next_state_qbs, gatewR, gatewI);
-        }
+#endif
+        
     } // end all gates G2P0
     
     // Iterate over all gates G2P1
@@ -133,13 +147,12 @@ void layer_w (TCircuitLayer *layer, int l,
         const int curr_state_qbs = qb_value(c_qb_nbr, current_state)*2+qb_value(t_qb_nbr, current_state);
         const int next_state_qbs = qb_value(c_qb_nbr, next_state)*2+qb_value(t_qb_nbr, next_state);
         
-        if (debug) {
+#ifdef DEBUG
             fprintf (stderr, "\tcurr: c_qb_nbr = %d, t_qb_nbr = %d -> qbs=%d\n",c_qb_nbr,t_qb_nbr, curr_state_qbs);
             fprintf (stderr, "\tnext: qb=%d\n",next_state_qbs);
             fprintf (stderr, "Current Layer Product = %f + i %f\n", lwR, lwI);
             fprintf (stderr, "Gate name = %d\n", gate->fdata.name);
-        }
-
+#endif
         switch (gate->fdata.name) {
             case 31:            // cp
                 gate_g2p1_w (curr_state_qbs, next_state_qbs, gate->fdata.m, gatewR, gatewI);
@@ -149,10 +162,10 @@ void layer_w (TCircuitLayer *layer, int l,
                 break;
         }
         complex_multiply (lwR, lwI, lwR, lwI, gatewR, gatewI);
-        if (debug) {
+#ifdef DEBUG
             fprintf (stderr, "Layer Product = %f + i %f\n", lwR, lwI);
             fprintf (stderr, "Layer %d, gate %d, name %d, in %d, out %d -> %f +i %f\n", l, g, gate->fdata.name, curr_state_qbs, next_state_qbs, gatewR, gatewI);
-        }
+#endif
     }
     // end all gates in the layer
     wR = lwR; wI = lwI;
@@ -166,9 +179,10 @@ float layer_sample (TCircuitLayer* layer, int l, unsigned long long current_stat
     
     float lwR = 1.f, lwI = 0.f, pdf=1.f;
     unsigned long long lnext_state=0ull;
-    bool debug = false;
 
-    if (debug) fprintf (stderr, "Evaluate layer %d with curr=%llu \n",l, current_state);
+#ifdef DEBUG
+     fprintf (stderr, "Evaluate layer %d with curr=%llu \n",l, current_state);
+#endif
     // Iterate over all gates G1P0
     for (int g=0 ; g<layer->num_type_gates[0] ; g++) {
         float gatewR, gatewI, gatepdf;
@@ -177,11 +191,10 @@ float layer_sample (TCircuitLayer* layer, int l, unsigned long long current_stat
         const int curr_state_qb = qb_value(qb_nbr, current_state);
         const float rnd = d(e);  // generate random nbr in [0, 1[
                 
-        if (debug) {
+#ifdef DEBUG
             fprintf (stderr, "\tgate name: %d; curr: qb_nbr = %d -> qb=%d\n",gate->name,qb_nbr, curr_state_qb);
             fprintf(stderr, "\t\trnd = %f\n", rnd);
-        }
-
+#endif
         int next_state_qb = 0;
 
         switch (gate->name) {
@@ -210,12 +223,10 @@ float layer_sample (TCircuitLayer* layer, int l, unsigned long long current_stat
                 gatepdf = gate_id_sample (curr_state_qb, rnd, next_state_qb, gatewR, gatewI);
                 break;
         }
-        if (debug)
-        {
+#ifdef DEBUG
             fprintf (stderr, "\tnext: qb_nbr = %d -> qb=%d; w= %f + j %f, pdf = %f\n",qb_nbr, next_state_qb, gatewR, gatewI, gatepdf);
             fprintf (stderr, "before gate : Layer Product = %f + i %f; layer pdf= %f\n", lwR, lwI, pdf);
-        }
-        
+#endif
         // verify early termination conditions
         if (complex_abs_square(gatewR, gatewI)<= 0.f || gatepdf <= 0.f) {
             return -1.f;
@@ -228,10 +239,11 @@ float layer_sample (TCircuitLayer* layer, int l, unsigned long long current_stat
         complex_multiply (lwR, lwI, lwR, lwI, gatewR, gatewI);
         pdf *= gatepdf;
         
-        if (debug) {
+#ifdef DEBUG
             fprintf (stderr, "after gate : Layer Product = %f + i %f; layer pdf= %f\n", lwR, lwI, pdf);
             fprintf (stderr, "after gate : Next state = %llu\n", lnext_state);
-        }
+#endif
+        
     }  // end all gates G1P0
     // Iterate over all gates G1P1
     for (int g=0 ; g<layer->num_type_gates[1] ; g++) {
@@ -241,10 +253,10 @@ float layer_sample (TCircuitLayer* layer, int l, unsigned long long current_stat
         const int curr_state_qb = qb_value(qb_nbr, current_state);
         const float rnd = d(e);  // generate random nbr in [0, 1[
 
-        if (debug) {
+#ifdef DEBUG
             fprintf (stderr, "\tgate name: %d; curr: qb_nbr = %d -> qb=%d\n",gate->fdata.name,qb_nbr, curr_state_qb);
             fprintf(stderr, "\t\trnd = %f\n", rnd);
-        }
+#endif
 
         int next_state_qb = 0;
 
@@ -259,11 +271,10 @@ float layer_sample (TCircuitLayer* layer, int l, unsigned long long current_stat
                 gatepdf = gate_id_sample (curr_state_qb, rnd, next_state_qb, gatewR, gatewI);
                 break;
         }
-        if (debug)
-        {
+#ifdef DEBUG
             fprintf (stderr, "\tnext: qb_nbr = %d -> qb=%d; w= %f + j %f, pdf = %f\n",qb_nbr, next_state_qb, gatewR, gatewI, gatepdf);
             fprintf (stderr, "before gate : Layer Product = %f + i %f; layer pdf= %f\n", lwR, lwI, pdf);
-        }
+#endif
         // verify early termination conditions
         if (complex_abs_square(gatewR, gatewI)<= 0.f || gatepdf <= 0.f) {
             return -1.f;
@@ -274,10 +285,10 @@ float layer_sample (TCircuitLayer* layer, int l, unsigned long long current_stat
 
         complex_multiply (lwR, lwI, lwR, lwI, gatewR, gatewI);
         pdf *= gatepdf;
-        if (debug) {
+#ifdef DEBUG
             fprintf (stderr, "after gate : Layer Product = %f + i %f; layer pdf= %f\n", lwR, lwI, pdf);
             fprintf (stderr, "after gate : Next state = %llu\n", lnext_state);
-        }
+#endif
 
     }  // end all gates G1P1
     
@@ -291,10 +302,10 @@ float layer_sample (TCircuitLayer* layer, int l, unsigned long long current_stat
         int next_state_qbs = 0;
         const float rnd = d(e);  // generate random nbr in [0, 1[
 
-        if (debug) {
+#ifdef DEBUG
             fprintf (stderr, "\tgate name: %d; curr: c_qb_nbr = %d , t_qb_nbr = %d -> qbs=%d\n",gate->name,c_qb_nbr,t_qb_nbr, curr_state_qbs);
             fprintf(stderr, "\t\trnd = %f\n", rnd);
-        }
+#endif
 
 
         switch (gate->name) {
@@ -311,11 +322,10 @@ float layer_sample (TCircuitLayer* layer, int l, unsigned long long current_stat
                 gatepdf = gate_id2_sample (curr_state_qbs, rnd, next_state_qbs, gatewR, gatewI);
                 break;
         }
-        if (debug)
-        {
+#ifdef DEBUG
             fprintf (stderr, "\tnext: qbs=%d; w= %f + j %f, pdf = %f\n",next_state_qbs, gatewR, gatewI, gatepdf);
             fprintf (stderr, "before gate : Layer Product = %f + i %f; layer pdf= %f\n", lwR, lwI, pdf);
-        }
+#endif
         // verify early termination conditions
         if (complex_abs_square(gatewR, gatewI)<= 0.f || gatepdf <= 0.f) {
             return -1.f;
@@ -327,10 +337,10 @@ float layer_sample (TCircuitLayer* layer, int l, unsigned long long current_stat
 
         complex_multiply (lwR, lwI, lwR, lwI, gatewR, gatewI);
         pdf *= gatepdf;
-        if (debug) {
+#ifdef DEBUG
             fprintf (stderr, "after gate : Layer Product = %f + i %f; layer pdf= %f\n", lwR, lwI, pdf);
             fprintf (stderr, "after gate : Next state = %llu\n", lnext_state);
-        }
+#endif
    } // end all gates G2P0
     
     // Iterate over all gates G2P1
@@ -344,13 +354,13 @@ float layer_sample (TCircuitLayer* layer, int l, unsigned long long current_stat
 
         int next_state_qbs = 0;
         
-        if (debug) {
+#ifdef DEBUG
             fprintf (stderr, "\tgate name: %d; curr: c_qb_nbr = %d , t_qb_nbr = %d -> qbs=%d\n",gate->fdata.name, c_qb_nbr,t_qb_nbr, curr_state_qbs);
             fprintf(stderr, "\t\trnd = %f\n", rnd);
-        }
+#endif
         switch (gate->fdata.name) {
             case 31:            // cp
-                if (debug) {
+#ifdef DEBUG
                     // printing gate data
                     fprintf (stderr, "m\t\t");
                     for (int r=0 ; r<4 ; r++) {
@@ -376,18 +386,17 @@ float layer_sample (TCircuitLayer* layer, int l, unsigned long long current_stat
                         fprintf (stderr, "\n\t\t");
                     }
                     fprintf (stderr, "\n");
-                }
+#endif
                 gatepdf = gate_g2p1_sample (curr_state_qbs, rnd, next_state_qbs, gate->fdata.m, gate->pdf, gate->cdf, gatewR, gatewI);
                 break;
             default:             // id
                 gatepdf = gate_id2_sample (curr_state_qbs, rnd, next_state_qbs, gatewR, gatewI);
                 break;
         }
-        if (debug)
-        {
+#ifdef DEBUG
             fprintf (stderr, "\tnext: qbs=%d; w= %f + j %f, pdf = %f\n", next_state_qbs, gatewR, gatewI, gatepdf);
             fprintf (stderr, "before gate : Layer Product = %f + i %f; layer pdf= %f\n", lwR, lwI, pdf);
-        }
+#endif
         // verify early termination conditions
         if (complex_abs_square(gatewR, gatewI)<= 0.f || gatepdf <= 0.f) {
             return -1.f;
@@ -399,10 +408,10 @@ float layer_sample (TCircuitLayer* layer, int l, unsigned long long current_stat
 
         complex_multiply (lwR, lwI, lwR, lwI, gatewR, gatewI);
         pdf *= gatepdf;
-        if (debug) {
+#ifdef DEBUG
             fprintf (stderr, "after gate : Layer Product = %f + i %f; layer pdf= %f\n", lwR, lwI, pdf);
             fprintf (stderr, "after gate : Next state = %llu\n", lnext_state);
-        }
+#endif
 
     }
     // end all gates in the layer

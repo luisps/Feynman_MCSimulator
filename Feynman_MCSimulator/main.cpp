@@ -8,6 +8,7 @@
 #include <iostream>
 #include <cstdlib>
 #include <stdlib.h>
+//#include <string>
 
 using namespace std;
 
@@ -18,16 +19,21 @@ using namespace std::chrono;
 #include "circuit.h"
 #include "all_paths.hpp"
 #include "IS_paths.hpp"
+#include "complex.h"
+#include "csv.hpp"   // from https://github.com/vincentlaucsb/csv-parser
+
+#include "PreProcessorSettings.h"
 
 static bool check_command_line(int, const char * []);
+static void print_usage (void);
 
 
-
-static const char *fileName;
+static char fileName[1024], csv_fileName[1024];
 static unsigned long long init_state, final_state;
 static bool loop_init_states, loop_final_states;
 static int n_threads=1;
 static unsigned long long n_samples=1ull<<20;
+static bool CSV_ampliture_verification = false;
 
 enum TAlgorithms {
     ALL_PATHS=1,
@@ -50,7 +56,9 @@ int main(int argc, const char * argv[]) {
     }
     else fprintf (stdout, "read_circuit() OK!\n");
     
-    //print_circuit(circuit);
+#ifdef DEBUG
+    print_circuit(circuit);
+#endif
     print_circuit_stats (circuit);
     fprintf(stdout, "\n");
     fprintf(stderr, "\n");
@@ -104,9 +112,8 @@ int main(int argc, const char * argv[]) {
             // https://www.geeksforgeeks.org/measure-execution-time-function-cpp/
             auto stop = high_resolution_clock::now();
             
-            fprintf (stdout,"< %llu | U | %llu> = %f + i %f \t", final_state, init_state, estimateR, estimateI);
-            
-            
+            fprintf (stdout,"< %llu | U | %llu > = %f + i %f \t", final_state, init_state, estimateR, estimateI);
+                        
             // https://www.geeksforgeeks.org/measure-execution-time-function-cpp/
             // Subtract stop and start timepoints and
             // cast it to required unit. Predefined units
@@ -124,6 +131,32 @@ int main(int argc, const char * argv[]) {
             else
                 fprintf (stdout, "T = %.1f s\n", ((float)duration.count())/1000000.f);
 
+            if (CSV_ampliture_verification)  {  // compare estimate with true velue from CSV
+                using namespace csv;
+                CSVReader reader(csv_fileName);
+                unsigned long long CSV_X;
+                float CSV_Ar=0.f, CSV_Ai=0.f;
+
+                bool found = false;
+                for (auto& row: reader) {
+                    // Note: Can also use index of column with [] operator
+                    CSV_X = row["psi0"].get<unsigned long long>();
+                    if (CSV_X==init_state) {
+                        CSV_Ar = row[to_string(final_state)+"r"].get<float>();
+                        CSV_Ai = row[to_string(final_state)+"i"].get<float>();
+                        found = true;
+                        break;
+                    }
+                }
+                if (found) {
+                    fprintf (stdout,"< %llu | U | %llu > = %f + i %f TRUE AMPLITUDE L2 error=%f\n\n", final_state, init_state, CSV_Ar, CSV_Ai, complex_abs(estimateR-CSV_Ar, estimateI-CSV_Ai));
+                } else {
+                    fprintf (stdout,"< %llu | U | %llu > TRUE AMPLITUDE not found in CSV\n\n", final_state, init_state);
+                }
+
+            }
+            
+
         } // iterate over final_states
     }  // iterate over init_states
     
@@ -131,16 +164,54 @@ int main(int argc, const char * argv[]) {
 }
 
 
-static bool check_command_line(int argc, const char * argv[]) {
+static void print_usage (void) {
     
+    fprintf (stderr, "\n\n >>> USAGE <<<\n\n");
+    fprintf (stderr, "program <circuit_file> <algorithm> <init_state> <final_state> <n_threads> <arg1>\n\n");
+    fprintf (stderr, "\t <circuit_file> - name of .data file describing the circuit to simulate (without the extension)\n");
+    fprintf (stderr, "\t <algorithm> :\n\t\t1 - ALL_PATHS\n\t\t2 - FORWARD IMPORTANCE SAMPLING\n");
+    fprintf (stderr, "\t <init_state> : integer; if 'a' executed for all possible input states!\n");
+    fprintf (stderr, "\t <final_state> : integer; if 'a' executed for all possible final states!\n");
+    fprintf (stderr, "\t <arg1> :\n\t\tif algorithm = FORWARD IMPORTANCE SAMPLING then log2 number of samples\n");
+    fprintf (stderr,"\n\n");
+}
+
+
+static bool check_command_line(int argc, const char * argv[]) {
+        
     if (argc<2) {
-        fprintf (stderr, "Error; requires filename!");
+        fprintf (stderr, "Error; requires filename (without the .data extension)!");
+        print_usage();
         return false;
     }
-    fileName = argv[1];
+    {
+        strcpy(fileName, argv[1]);
+        strcat (fileName, ".data");
+        FILE *f = fopen(fileName, "rb");
+        if (f==NULL) {
+            fprintf (stderr, "Error; file %s does not exist!", fileName);
+            return false;
+        }
+        fclose (f);
+
+        // IS there a csv file with the pre computed amplitudes ?
+        strcpy(csv_fileName, argv[1]);
+        strcat (csv_fileName, ".csv");
+        f = fopen(csv_fileName, "rb");
+        if (f==NULL) {
+            csv_fileName[0] = '\0';   // no csv file
+            CSV_ampliture_verification = false;
+        }
+        else {
+            fprintf (stderr, "CSV file exists: will check accuracy\n");
+            fclose (f);
+            CSV_ampliture_verification = true;
+        }
+    }
     
     if (argc<3) {
         fprintf (stderr, "Error; requires algorithm!");
+        print_usage();
         return false;
     }
     switch (atoi(argv[2])) {
@@ -151,12 +222,15 @@ static bool check_command_line(int argc, const char * argv[]) {
             algorithm = IS_FORWARD;
             break;
         default:
-            algorithm = ALL_PATHS;
+            fprintf (stderr, "Error; <algorithm> :\n\t\t1 - ALL_PATHS\n\t\t2 - FORWARD IMPORTANCE SAMPLING\n!");
+            print_usage();
+            return false;
             break;
     }
     
     if (argc<5) {
         fprintf (stderr, "Error; requires initial and final states!");
+        print_usage();
         return false;
     }
     if (argv[3][0]=='a')  { // loop over all init states
@@ -182,9 +256,12 @@ static bool check_command_line(int argc, const char * argv[]) {
             n_threads=atoi(argv[5]);
         }
     }
+    fprintf (stderr, "Number of threads = %d\n", n_threads);
 
     if (argc>6) { // set the nbr of samples
-        n_samples = strtoull(argv[6], NULL, 10);
+        int exp2 = atoi(argv[6]);
+        n_samples = ((unsigned long long)(1ull << exp2));
+        fprintf (stderr, "Number of samples = %llu\n", n_samples);
     }
     else if (algorithm==IS_FORWARD) {
         fprintf (stderr, "Number of samples not specified in command line. Defaulting to %llu\n", n_samples);

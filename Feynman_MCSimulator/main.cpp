@@ -44,6 +44,9 @@ static TAlgorithms algorithm;
 
 int main(int argc, const char * argv[]) {
     TCircuit *circuit;
+#ifdef CONVERGENCE_STATS
+    std::vector<T_Stats> stats;
+#endif
     
     if (!check_command_line (argc, argv)) return 1;
     
@@ -56,9 +59,9 @@ int main(int argc, const char * argv[]) {
     }
     else fprintf (stdout, "read_circuit() OK!\n");
     
-#ifdef DEBUG
-    print_circuit(circuit);
-#endif
+    #ifdef DEBUG
+        print_circuit(circuit);
+    #endif
     print_circuit_stats (circuit);
     fprintf(stdout, "\n");
     fprintf(stderr, "\n");
@@ -102,7 +105,11 @@ int main(int argc, const char * argv[]) {
                     break;
                     
                 case IS_FORWARD:
+#ifdef CONVERGENCE_STATS
+                    ret = IS_paths (circuit, init_state, final_state, n_samples, estimateR, estimateI, stats, n_threads);
+#else
                     ret = IS_paths (circuit, init_state, final_state, n_samples, estimateR, estimateI, n_threads);
+#endif
                     break;
                     
                 default:
@@ -154,8 +161,24 @@ int main(int argc, const char * argv[]) {
                     fprintf (stdout,"< %llu | U | %llu > TRUE AMPLITUDE not found in CSV\n\n", final_state, init_state);
                 }
 
-            }
+            }  // CSV_amplitude verification
             
+            
+#ifdef CONVERGENCE_STATS
+            // print / save stats
+            if (algorithm==IS_FORWARD && n_threads > 1) {
+                float stat_estimateR, stat_estimateI;
+                fprintf (stderr, "\nCONVERGENCE STATS (%d entries)\n\n", (int)stats.size());
+                for (auto & stat : stats) {
+                    // compute running estimate
+                    stat_estimateR = stat.sumR / ((float)stat.n_samples);
+                    stat_estimateI = stat.sumI / ((float)stat.n_samples);
+
+                    fprintf (stderr, "Samples %llu: %.8f + i %.8f\n", stat.n_samples, stat_estimateR, stat_estimateI);
+                }
+                fprintf (stderr, "\n");
+            }
+#endif
 
         } // iterate over final_states
     }  // iterate over init_states

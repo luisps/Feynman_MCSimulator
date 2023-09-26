@@ -35,12 +35,12 @@
  *       XXXX res=...;               // the result : problem dependent
  */
 
-std::mutex mx_m2s, mx_s2m;
-std::condition_variable cv_m2s, cv_s2m;
+static std::mutex mx_m2s, mx_s2m;
+static std::condition_variable cv_m2s, cv_s2m;
 
 // Shared predicate variables
 // Master to Slave
-bool terminate = false;
+static bool terminate = false;
 
 
 #ifdef NON_ZERO_PATHS

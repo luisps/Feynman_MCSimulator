@@ -31,7 +31,7 @@
  *
  */
 
-//#define NON_ZERO_PATHS
+#define NON_ZERO_PATHS
 
 #ifdef NON_ZERO_PATHS
 typedef struct path_desc {
@@ -47,11 +47,12 @@ typedef struct path_desc {
  *
  */
 
-#define CONVERGENCE_STATS
+//#define CONVERGENCE_STATS
 
 #ifdef CONVERGENCE_STATS
 typedef struct T_Stats_s {
     unsigned long long n_samples;
+    unsigned long long n_Paths;
     float sumR, sumI;
 } T_Stats;
 #endif

@@ -8,13 +8,11 @@
 #ifndef path_h
 #define path_h
 
+#include <vector>
 
-unsigned long long path_hash (std::vector<unsigned long long> path, const unsigned long long NBR_STATES) {
-    unsigned long long ret = 0ull;
-    for (auto& state : path) {
-        ret = ret*NBR_STATES + state;
-    }
-    return ret;
-}
+
+unsigned long long path_hash (std::vector<unsigned long long> path, const unsigned long long NBR_STATES);
+
+void print_path (std::vector<unsigned long long> path, bool forward=true);
 
 #endif /* path_h */

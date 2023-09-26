@@ -19,6 +19,7 @@ using namespace std::chrono;
 #include "circuit.h"
 #include "all_paths.hpp"
 #include "IS_paths.hpp"
+#include "BD_paths.hpp"
 #include "complex.h"
 #include "csv.hpp"   // from https://github.com/vincentlaucsb/csv-parser
 
@@ -26,18 +27,22 @@ using namespace std::chrono;
 
 static bool check_command_line(int, const char * []);
 static void print_usage (void);
+#ifdef CONVERGENCE_STATS
+static void save_stats (std::vector<T_Stats>, bool, float, float);
+#endif
 
 
-static char fileName[1024], csv_fileName[1024];
+static char fileName[1024], csv_amplitude_fileName[1024];
 static unsigned long long init_state, final_state;
 static bool loop_init_states, loop_final_states;
 static int n_threads=1;
 static unsigned long long n_samples=1ull<<20;
-static bool CSV_ampliture_verification = false;
+static bool CSV_amplitude_verification = false;
 
 enum TAlgorithms {
     ALL_PATHS=1,
-    IS_FORWARD=2
+    IS_FORWARD=2,
+    BD_SAMPLE=3
 } ;
 
 static TAlgorithms algorithm;
@@ -95,6 +100,9 @@ int main(int argc, const char * argv[]) {
             
             bool ret;
             float estimateR, estimateI;
+            float CSV_Ar=0.f, CSV_Ai=0.f;
+            bool CSV_found = false;
+
             // https://www.geeksforgeeks.org/measure-execution-time-function-cpp/
             auto start = high_resolution_clock::now();
             
@@ -111,7 +119,14 @@ int main(int argc, const char * argv[]) {
                     ret = IS_paths (circuit, init_state, final_state, n_samples, estimateR, estimateI, n_threads);
 #endif
                     break;
-                    
+                case BD_SAMPLE:
+#ifdef CONVERGENCE_STATS
+                    ret = BD_paths (circuit, init_state, final_state, n_samples, estimateR, estimateI, stats, n_threads);
+#else
+                    ret = BD_paths (circuit, init_state, final_state, n_samples, estimateR, estimateI, n_threads);
+#endif
+                    break;
+
                 default:
                     break;
             }
@@ -138,24 +153,22 @@ int main(int argc, const char * argv[]) {
             else
                 fprintf (stdout, "T = %.1f s\n", ((float)duration.count())/1000000.f);
 
-            if (CSV_ampliture_verification)  {  // compare estimate with true velue from CSV
+            if (CSV_amplitude_verification)  {  // compare estimate with true velue from CSV
                 using namespace csv;
-                CSVReader reader(csv_fileName);
+                CSVReader reader(csv_amplitude_fileName);
                 unsigned long long CSV_X;
-                float CSV_Ar=0.f, CSV_Ai=0.f;
 
-                bool found = false;
                 for (auto& row: reader) {
                     // Note: Can also use index of column with [] operator
                     CSV_X = row["psi0"].get<unsigned long long>();
                     if (CSV_X==init_state) {
                         CSV_Ar = row[to_string(final_state)+"r"].get<float>();
                         CSV_Ai = row[to_string(final_state)+"i"].get<float>();
-                        found = true;
+                        CSV_found = true;
                         break;
                     }
                 }
-                if (found) {
+                if (CSV_found) {
                     fprintf (stdout,"< %llu | U | %llu > = %f + i %f TRUE AMPLITUDE L2 error=%f\n\n", final_state, init_state, CSV_Ar, CSV_Ai, complex_abs(estimateR-CSV_Ar, estimateI-CSV_Ai));
                 } else {
                     fprintf (stdout,"< %llu | U | %llu > TRUE AMPLITUDE not found in CSV\n\n", final_state, init_state);
@@ -166,17 +179,8 @@ int main(int argc, const char * argv[]) {
             
 #ifdef CONVERGENCE_STATS
             // print / save stats
-            if (algorithm==IS_FORWARD && n_threads > 1) {
-                float stat_estimateR, stat_estimateI;
-                fprintf (stderr, "\nCONVERGENCE STATS (%d entries)\n\n", (int)stats.size());
-                for (auto & stat : stats) {
-                    // compute running estimate
-                    stat_estimateR = stat.sumR / ((float)stat.n_samples);
-                    stat_estimateI = stat.sumI / ((float)stat.n_samples);
-
-                    fprintf (stderr, "Samples %llu: %.8f + i %.8f\n", stat.n_samples, stat_estimateR, stat_estimateI);
-                }
-                fprintf (stderr, "\n");
+            if ((algorithm==IS_FORWARD || algorithm==BD_SAMPLE) && n_threads > 1) {
+                save_stats (stats, CSV_found, CSV_Ar, CSV_Ai);
             }
 #endif
 
@@ -218,17 +222,17 @@ static bool check_command_line(int argc, const char * argv[]) {
         fclose (f);
 
         // IS there a csv file with the pre computed amplitudes ?
-        strcpy(csv_fileName, argv[1]);
-        strcat (csv_fileName, ".csv");
-        f = fopen(csv_fileName, "rb");
+        strcpy(csv_amplitude_fileName, argv[1]);
+        strcat (csv_amplitude_fileName, ".csv");
+        f = fopen(csv_amplitude_fileName, "rb");
         if (f==NULL) {
-            csv_fileName[0] = '\0';   // no csv file
-            CSV_ampliture_verification = false;
+            csv_amplitude_fileName[0] = '\0';   // no csv file
+            CSV_amplitude_verification = false;
         }
         else {
             fprintf (stderr, "CSV file exists: will check accuracy\n");
             fclose (f);
-            CSV_ampliture_verification = true;
+            CSV_amplitude_verification = true;
         }
     }
     
@@ -243,6 +247,9 @@ static bool check_command_line(int argc, const char * argv[]) {
             break;
         case 2:    // Importance Sampling FORWARD
             algorithm = IS_FORWARD;
+            break;
+        case 3:    // BiDirectional Sampling
+            algorithm = BD_SAMPLE;
             break;
         default:
             fprintf (stderr, "Error; <algorithm> :\n\t\t1 - ALL_PATHS\n\t\t2 - FORWARD IMPORTANCE SAMPLING\n!");
@@ -292,3 +299,49 @@ static bool check_command_line(int argc, const char * argv[]) {
 
     return true;
 }
+
+
+#ifdef CONVERGENCE_STATS
+static void save_stats (std::vector<T_Stats> stats, bool true_exists, float trueR, float trueI, TAlgorithms algorithm) {
+    char csv_stats_fileName[1024], alg_str[16];
+    FILE *f;
+    float stat_estimateR, stat_estimateI, varR, varI;
+    
+    switch (algorithm) {
+        case IS_FORWARD:
+            snprintf(alg_str, 16, "IS");
+            break;
+        case BD_SAMPLE:
+            snprintf(alg_str, 16, "BD");
+            break;
+        default:
+            snprintf(alg_str, 16, "UKNOWN");
+            break;
+    }
+    snprintf (csv_stats_fileName, 1024, "%s_stats_%s_%llu_%llu.csv", fileName, alg_str, init_state, final_state);
+
+    f = fopen(csv_stats_fileName,"wt");
+
+    if (true_exists) {
+        fprintf (f, "trueR , trueI\n%f , %f\n", trueR, trueI);
+        fprintf (f, "n_samples , estimateR , estimateI, varianceR, varianceI\n");
+    } else
+        fprintf (f, "n_samples , estimateR , estimateI\n");
+
+    for (auto & stat : stats) {
+        // compute running estimate
+        stat_estimateR = stat.sumR / ((float)stat.n_samples);
+        stat_estimateI = stat.sumI / ((float)stat.n_samples);
+        
+        if (true_exists) {
+            varR = (stat_estimateR-trueR)*(stat_estimateR-trueR);
+            varI = (stat_estimateI-trueI)*(stat_estimateI-trueI);
+            fprintf (f, "%llu , %f , %f, %f, %f\n", stat.n_samples, stat_estimateR, stat_estimateI, varR, varI);
+        }
+        else {
+            fprintf (f, "%llu , %f , %f\n", stat.n_samples, stat_estimateR, stat_estimateI);
+        }
+    }
+    fclose (f);
+}
+#endif

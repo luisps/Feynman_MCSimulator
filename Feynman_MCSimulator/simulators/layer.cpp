@@ -175,7 +175,8 @@ void layer_w (TCircuitLayer *layer, int l,
 float layer_sample (TCircuitLayer* layer, int l, unsigned long long current_state,
                     unsigned long long& next_state,
                     float& wR, float& wI,
-                    std::default_random_engine& e, std::uniform_real_distribution<float>& d) {
+                    std::default_random_engine& e, std::uniform_real_distribution<float>& d,
+                    bool forwardSample) {
     
     float lwR = 1.f, lwI = 0.f, pdf=1.f;
     unsigned long long lnext_state=0ull;
@@ -207,8 +208,11 @@ float layer_sample (TCircuitLayer* layer, int l, unsigned long long current_stat
             case 2:             // x
                 gatepdf = gate_x_sample (curr_state_qb, rnd, next_state_qb, gatewR, gatewI);
                 break;
-            case 3:             // y
-                gatepdf = gate_y_sample (curr_state_qb, rnd, next_state_qb, gatewR, gatewI);
+            case 3:             // y  -- NON-SYMMETRICAL !!!!!
+                if (forwardSample)
+                    gatepdf = gate_y_sample (curr_state_qb, rnd, next_state_qb, gatewR, gatewI);
+                else
+                    gatepdf = gate_y_sample_back (curr_state_qb, rnd, next_state_qb, gatewR, gatewI);
                 break;
             case 4:             // z
                 gatepdf = gate_z_sample (curr_state_qb, rnd, next_state_qb, gatewR, gatewI);
@@ -262,10 +266,13 @@ float layer_sample (TCircuitLayer* layer, int l, unsigned long long current_stat
 
         switch (gate->fdata.name) {
             case 11:            // rx
-            case 12:            // ry
+            case 12:            // ry    -- THIS IS NON SYMMETRICAL
             case 13:            // rz
             case 14:            // p
-                gatepdf = gate_g1p1_sample (curr_state_qb, rnd, next_state_qb, gate->fdata.m, gate->pdf, gatewR, gatewI);
+                if (forwardSample)
+                    gatepdf = gate_g1p1_sample (curr_state_qb, rnd, next_state_qb, gate->fdata.m, gate->pdf, gatewR, gatewI);
+                else
+                    gatepdf = gate_g1p1_sample_back (curr_state_qb, rnd, next_state_qb, gate->fdata.m, gate->pdf, gatewR, gatewI);
                 break;
             default:             // id
                 gatepdf = gate_id_sample (curr_state_qb, rnd, next_state_qb, gatewR, gatewI);

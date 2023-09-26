@@ -85,6 +85,14 @@ inline float gate_y_sample (int i_qb, const float rnd, int& o_qb, float &wR, flo
     return 1.f;
 }
 
+inline float gate_y_sample_back (int i_qb, const float rnd, int& o_qb, float &wR, float &wI) {
+    o_qb = 1 - i_qb;
+    wI = (i_qb == 0 ? -1.f : 1.f );
+    wR = 0.f;
+    return 1.f;
+}
+
+
 inline void gate_z_w (int i_qb, int o_qb, float &wR, float &wI) {
     wR = (i_qb != o_qb  ? 0.f : (i_qb == 0 ? 1.f : -1.f ));
     wI = 0.f;
@@ -139,6 +147,20 @@ inline float gate_g1p1_sample (int i_qb, const float rnd, int& o_qb,  float m[2]
     return pdf[o_qb][i_qb];
 
 }
+
+inline float gate_g1p1_sample_back (int i_qb, const float rnd, int& o_qb,  float m[2][2][2], float pdf[2][2], float &wR, float &wI) {
+    // backward samplign non symmetric matrix (actually only RY)
+    // Treat matrices as transposed
+    o_qb = (rnd > pdf[i_qb][0] ? 1 : 0);
+    //input selects the column
+    // output selects the row
+    // BUT IS TRANSPOSED
+    wR = m[i_qb][o_qb][0];  // REAL
+    wI = m[i_qb][o_qb][1];  // IMAG
+    return pdf[i_qb][o_qb];
+
+}
+
 
 // G2P0 gates
 inline void gate_id2_w (int i_qbs, int o_qbs, float &wR, float &wI) {

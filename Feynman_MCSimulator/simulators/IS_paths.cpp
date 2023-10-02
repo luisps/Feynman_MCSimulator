@@ -16,6 +16,12 @@
 #include "layer.hpp"
 #include "PreProcessorSettings.h"
 
+// For time stats
+// https://www.geeksforgeeks.org/measure-execution-time-function-cpp/
+#include <chrono>
+using namespace std::chrono;
+
+
 /*
  * MASTER SLAVE
  *
@@ -96,6 +102,7 @@ bool IS_paths (TCircuit *c, unsigned long long init_state,
 #endif
         estimateR = sumR / ((float)n_samples);
         estimateI = sumI / ((float)n_samples);
+        n_ProcessedSamples = n_samples;
     }
     else {
         
@@ -119,6 +126,11 @@ bool IS_paths (TCircuit *c, unsigned long long init_state,
         unsigned long long * processedSamples = new unsigned long long [n_threads]; // = 0ull
 
         bool * idleThreads = new bool[n_threads]; // false
+        
+#ifdef CONVERGENCE_STATS
+        // https://www.geeksforgeeks.org/measure-execution-time-function-cpp/
+        auto time_start = high_resolution_clock::now();
+#endif
 
 #ifdef DEBUG_THREAD
         fprintf (stderr, "MASTER : Creating %d threads... \n", n_threads); fflush (stderr);
@@ -151,7 +163,7 @@ bool IS_paths (TCircuit *c, unsigned long long init_state,
 #endif
             { // scoped lock
                 std::lock_guard<std::mutex> lk_m2s(mx_m2s);
-                samples2proc[t] = ((remaining_samples-TASK_SIZE <0ull) ? remaining_samples : TASK_SIZE);
+                samples2proc[t] = ((remaining_samples < TASK_SIZE ) ? remaining_samples : TASK_SIZE);
                 remaining_samples -= samples2proc[t];
                 taskReady[t] = true;
             }  // lk_m2s terminates, thus mx_m2s is released by the lock destructor
@@ -191,6 +203,14 @@ bool IS_paths (TCircuit *c, unsigned long long init_state,
                         stat.sumR = sumR;
                         stat.sumI = sumI;
                         stat.n_samples = n_ProcessedSamples;
+                        stat.n_Paths = n_ProcessedSamples;
+                        // https://www.geeksforgeeks.org/measure-execution-time-function-cpp/
+                        auto time_now = high_resolution_clock::now();
+                        auto duration = duration_cast<microseconds>(time_now - time_start);
+                        
+                        // To get the value of duration use the count()
+                        // member function on the duration object
+                        stat.time_us = duration.count();
                         stats.push_back (stat);
 #endif
                     }
@@ -210,7 +230,7 @@ bool IS_paths (TCircuit *c, unsigned long long init_state,
                     // loop through all idleThreads and send a task to those that are == true
                     for (int t=0 ; t < n_threads && remaining_samples > 0ll ; t++) {
                         if (idleThreads[t]) {
-                            samples2proc[t] = ((remaining_samples-TASK_SIZE <0ull) ? remaining_samples : TASK_SIZE);
+                            samples2proc[t] = ((remaining_samples < TASK_SIZE) ? remaining_samples : TASK_SIZE);
                             remaining_samples -= samples2proc[t];
                             taskReady[t] = true;
                             idleThreads[t] = false;
@@ -262,9 +282,11 @@ bool IS_paths (TCircuit *c, unsigned long long init_state,
         estimateI = sumI / n_samples;
     }
 
+    fprintf (stderr, "Total samples: %llu\n", n_ProcessedSamples);
 #ifdef NON_ZERO_PATHS
     fprintf (stderr, "Non zero paths: %d\n", non_zero_paths);
 #endif
+    fprintf (stderr, "Total paths: %llu\n", n_samples);
     
     return ret;
 }
@@ -542,7 +564,7 @@ static bool IS_paths_NOVEC_kernel (TCircuit *c,
 #endif
     sumR=l_sumR;
     sumI=l_sumI;
-    
+
     return true;
 }
 

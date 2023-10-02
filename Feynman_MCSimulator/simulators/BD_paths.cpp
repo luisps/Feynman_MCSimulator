@@ -18,6 +18,11 @@
 #include "PreProcessorSettings.h"
 #include "path.h"
 
+// For time stats
+// https://www.geeksforgeeks.org/measure-execution-time-function-cpp/
+#include <chrono>
+using namespace std::chrono;
+
 static std::mutex mx_m2s, mx_s2m;
 static std::condition_variable cv_m2s, cv_s2m;
 
@@ -29,29 +34,29 @@ static bool terminate = false;
 #ifdef NON_ZERO_PATHS
 static bool BD_paths_NOVEC_NOT (TCircuit *c,
                 unsigned long long init_state, unsigned long long final_state, const unsigned long long n_samples,
-                float &sumR, float &sumI, unsigned long long& n_Paths, int& non_zero_paths);
+                float &sumR, float &sumI, unsigned long long& n_Paths, const bool MIS, int& non_zero_paths);
 static bool BD_paths_NOVEC_T (TCircuit *c,
-                unsigned long long init_state, unsigned long long final_state, unsigned long long& samples2proc, bool& taskReady, bool& resAvailable, float& T_sumR, float& T_sumI, unsigned long long& n_Paths, unsigned long long& processedSamples, int& non_zero_paths);
+                unsigned long long init_state, unsigned long long final_state, unsigned long long& samples2proc, bool& taskReady, bool& resAvailable, float& T_sumR, float& T_sumI, unsigned long long& n_Paths, unsigned long long& processedSamples, const bool MIS, int& non_zero_paths);
 #else
 static bool BD_paths_NOVEC_NOT (TCircuit *c,
                 unsigned long long init_state, unsigned long long final_state, const unsigned long long n_samples,
-                float &sumR, float &sumI, unsigned long long& n_Paths);
+                float &sumR, float &sumI, unsigned long long& n_Pathsconst bool MIS, );
 static bool BD_paths_NOVEC_T (TCircuit *c,
-                unsigned long long init_state, unsigned long long final_state, unsigned long long& samples2proc, bool& taskReady, bool& resAvailable, float& T_sumR, float& T_sumI, unsigned long long& n_Paths, unsigned long long& processedSamples);
+                unsigned long long init_state, unsigned long long final_state, unsigned long long& samples2proc, bool& taskReady, bool& resAvailable, float& T_sumR, float& T_sumI, unsigned long long& n_Paths, unsigned long long& processedSamples, const bool MIS);
 #endif
 
 #ifdef NON_ZERO_PATHS
 static bool BD_paths_NOVEC_kernel (TCircuit *c,
                 unsigned long long init_state, unsigned long long final_state, const unsigned long long n_samples,
                 float &sumR, float &sumI,
-                unsigned long long& n_Paths,
+                unsigned long long& n_Paths, const bool MIS,
                std::default_random_engine& e, std::uniform_real_distribution<float>& d,
                                    int& non_zero_paths);
 #else
     static bool BD_paths_NOVEC_kernel (TCircuit *c,
                 unsigned long long init_state, unsigned long long final_state, const unsigned long long n_samples,
                 float &sumR, float &sumI,
-                unsigned long long& n_Paths,
+                unsigned long long& n_Paths, const bool MIS,
                 std::default_random_engine& e, std::uniform_real_distribution<float>& d);
 #endif
 
@@ -76,14 +81,21 @@ static float _ConnectPath (TCircuitLayer* layer, const int l,
                        float Bpath_PwR, float Bpath_PwI, float Bpath_Pprob,
                        float& wR, float& wI);
 
+static float _ConnectPathMIS (TCircuitLayer* layer, const int l, const int num_layers,
+                     std::vector<unsigned long long> Fpath,
+                       float Fpath_PwR, float Fpath_PwI, std::vector<float> Fpath_prob, std::vector<float> Fpath_Pprob,
+                        std::vector<unsigned long long> Bpath,
+                       float Bpath_PwR, float Bpath_PwI, std::vector<float> Bpath_prob, std::vector<float> Bpath_Pprob,
+                       float& wR, float& wI);
+
 #ifdef CONVERGENCE_STATS
 bool BD_paths (TCircuit *c, unsigned long long init_state,
                 unsigned long long final_state, const unsigned long long n_samples,
-               float &estimateR, float &estimateI, std::vector<T_Stats>& stats, const int n_threads) {
+               float &estimateR, float &estimateI, std::vector<T_Stats>& stats, const int n_threads, const bool MIS) {
 #else
 bool BD_paths (TCircuit *c, unsigned long long init_state,
                 unsigned long long final_state, const unsigned long long n_samples,
-                float &estimateR, float &estimateI, const int n_threads) {
+                float &estimateR, float &estimateI, const int n_threads, const bool MIS) {
 #endif
 
     bool ret=true;
@@ -97,12 +109,13 @@ bool BD_paths (TCircuit *c, unsigned long long init_state,
     
     if (n_threads<=1) {
 #ifdef NON_ZERO_PATHS
-        ret = BD_paths_NOVEC_NOT (c, init_state, final_state, n_samples, sumR, sumI, n_Paths, non_zero_paths);
+        ret = BD_paths_NOVEC_NOT (c, init_state, final_state, n_samples, sumR, sumI, n_Paths, MIS, non_zero_paths);
 #else
-        ret = BD_paths_NOVEC_NOT (c, init_state, final_state, n_samples, sumR, sumI, n_Paths);
+        ret = BD_paths_NOVEC_NOT (c, init_state, final_state, n_samples, sumR, sumI, n_Paths, MIS);
 #endif
         estimateR = sumR / ((float)n_Paths);
         estimateI = sumI / ((float)n_Paths);
+        n_ProcessedSamples = n_samples;
     }
     else {
         
@@ -128,6 +141,11 @@ bool BD_paths (TCircuit *c, unsigned long long init_state,
 
         bool * idleThreads = new bool[n_threads]; // false
 
+#ifdef CONVERGENCE_STATS
+        // https://www.geeksforgeeks.org/measure-execution-time-function-cpp/
+        auto time_start = high_resolution_clock::now();
+#endif
+
 #ifdef DEBUG_THREAD
         fprintf (stderr, "MASTER : Creating %d threads... \n", n_threads); fflush (stderr);
 #endif
@@ -144,9 +162,9 @@ bool BD_paths (TCircuit *c, unsigned long long init_state,
             idleThreads[t] = false;
 #ifdef NON_ZERO_PATHS
             l_NzeroP[t] = 0;
-            threads.push_back(std::thread(BD_paths_NOVEC_T, c, init_state, final_state, std::ref(samples2proc[t]), std::ref(taskReady[t]), std::ref(resAvailable[t]), std::ref(T_sumR[t]), std::ref(T_sumI[t]), std::ref(nT_Paths[t]), std::ref(processedSamples[t]), std::ref(l_NzeroP[t])));
+            threads.push_back(std::thread(BD_paths_NOVEC_T, c, init_state, final_state, std::ref(samples2proc[t]), std::ref(taskReady[t]), std::ref(resAvailable[t]), std::ref(T_sumR[t]), std::ref(T_sumI[t]), std::ref(processedSamples[t]), std::ref(nT_Paths[t]), MIS, std::ref(l_NzeroP[t])));
 #else
-            threads.push_back(std::thread(BD_paths_NOVEC_T, c, init_state, final_state, std::ref(samples2proc[t]), std::ref(taskReady[t]), std::ref(resAvailable[t]), std::ref(T_sumR[t]), std::ref(T_sumI[t]), std::ref(nT_Paths[t]), std::ref(processedSamples[t])));
+            threads.push_back(std::thread(BD_paths_NOVEC_T, c, init_state, final_state, std::ref(samples2proc[t]), std::ref(taskReady[t]), std::ref(resAvailable[t]), std::ref(T_sumR[t]), std::ref(T_sumI[t]), std::ref(processedSamples[t]), std::ref(nT_Paths[t]), MIS));
 #endif
         }
 #ifdef DEBUG_THREAD
@@ -160,7 +178,7 @@ bool BD_paths (TCircuit *c, unsigned long long init_state,
 #endif
             { // scoped lock
                 std::lock_guard<std::mutex> lk_m2s(mx_m2s);
-                samples2proc[t] = ((remaining_samples-TASK_SIZE <0ull) ? remaining_samples : TASK_SIZE);
+                samples2proc[t] = ((remaining_samples < TASK_SIZE) ? remaining_samples : TASK_SIZE);
                 remaining_samples -= samples2proc[t];
                 taskReady[t] = true;
             }  // lk_m2s terminates, thus mx_m2s is released by the lock destructor
@@ -202,7 +220,17 @@ bool BD_paths (TCircuit *c, unsigned long long init_state,
                         stat.sumI = sumI;
                         stat.n_samples = n_ProcessedSamples;
                         stat.n_Paths = n_Paths;
+                        // https://www.geeksforgeeks.org/measure-execution-time-function-cpp/
+                        auto time_now = high_resolution_clock::now();
+                        auto duration = duration_cast<microseconds>(time_now - time_start);
+                        
+                        // To get the value of duration use the count()
+                        // member function on the duration object
+                        stat.time_us = duration.count();
                         stats.push_back (stat);
+#endif
+#ifdef DEBUG_THREAD
+                        fprintf (stderr, "MASTER : mx_s2mlocked: thread %d sent %f + i %f for %llu paths \n", t, T_sumR[t], T_sumI[t], nT_Paths[t]); fflush  (stderr);
 #endif
                     }
                 }
@@ -221,7 +249,7 @@ bool BD_paths (TCircuit *c, unsigned long long init_state,
                     // loop through all idleThreads and send a task to those that are == true
                     for (int t=0 ; t < n_threads && remaining_samples > 0ll ; t++) {
                         if (idleThreads[t]) {
-                            samples2proc[t] = ((remaining_samples-TASK_SIZE <0ull) ? remaining_samples : TASK_SIZE);
+                            samples2proc[t] = ((remaining_samples < TASK_SIZE) ? remaining_samples : TASK_SIZE);
                             remaining_samples -= samples2proc[t];
                             taskReady[t] = true;
                             idleThreads[t] = false;
@@ -273,10 +301,12 @@ bool BD_paths (TCircuit *c, unsigned long long init_state,
         estimateI = sumI / n_Paths;
     }
 
+    fprintf (stderr, "Total samples: %llu\n", n_ProcessedSamples);
 #ifdef NON_ZERO_PATHS
     fprintf (stderr, "Non zero paths: %d\n", non_zero_paths);
 #endif
-    
+    fprintf (stderr, "Total paths: %llu\n", n_Paths);
+
     return ret;
 }
 
@@ -284,13 +314,13 @@ bool BD_paths (TCircuit *c, unsigned long long init_state,
 static bool BD_paths_NOVEC_NOT (TCircuit *c,
                 unsigned long long init_state, unsigned long long final_state, const unsigned long long n_samples,
                               float &sumR, float &sumI,
-                                unsigned long long& n_Paths,
+                                unsigned long long& n_Paths, const bool MIS,
                                 int& non_zero_paths) {
 #else
     static bool BD_paths_NOVEC_NOT (TCircuit *c,
                     unsigned long long init_state, unsigned long long final_state, const unsigned long long n_samples,
                                   float &sumR, float &sumI,
-                                    unsigned long long& n_Paths) {
+                                    unsigned long long& n_Paths, const bool MIS) {
 #endif
     // thread local random number generator (seeded by a local random device)
     // see https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2013/n3551.pdf
@@ -299,9 +329,9 @@ static bool BD_paths_NOVEC_NOT (TCircuit *c,
     std::uniform_real_distribution<float>d{0.0,1.0};  // uniform distribution in[0,1[ (float)
         
 #ifdef NON_ZERO_PATHS
-    return BD_paths_NOVEC_kernel(c, init_state, final_state, n_samples, sumR, sumI, n_Paths, e, d, non_zero_paths);
+    return BD_paths_NOVEC_kernel(c, init_state, final_state, n_samples, sumR, sumI, n_Paths, MIS, e, d, non_zero_paths);
 #else
-    return BD_paths_NOVEC_kernel(c, init_state, final_state, n_samples, sumR, sumI, n_Paths, e, d);
+    return BD_paths_NOVEC_kernel(c, init_state, final_state, n_samples, sumR, sumI, n_Paths, MIS, e, d);
 #endif
         
 }
@@ -309,12 +339,12 @@ static bool BD_paths_NOVEC_NOT (TCircuit *c,
 #ifdef NON_ZERO_PATHS
 static bool BD_paths_NOVEC_T (TCircuit *c,
                 unsigned long long init_state, unsigned long long final_state, unsigned long long& samples2proc, bool& taskReady, bool& resAvailable, float& T_sumR, float& T_sumI, unsigned long long& processedSamples,
-                              unsigned long long& n_Paths,
+                              unsigned long long& n_Paths, const bool MIS,
                               int& non_zero_paths) {
 #else
 static bool BD_paths_NOVEC_T (TCircuit *c,
                 unsigned long long init_state, unsigned long long final_state, unsigned long long& samples2proc, bool& taskReady, bool& resAvailable, float& T_sumR, float& T_sumI, unsigned long long& processedSamples,
-                              unsigned long long& n_Paths) {
+                              unsigned long long& n_Paths, const bool MIS) {
 #endif
     
     // thread local random number generator (seeded by a local random device)
@@ -325,6 +355,7 @@ static bool BD_paths_NOVEC_T (TCircuit *c,
         
     unsigned long long n_samples=0ull;
     float sumR, sumI;
+    unsigned long long Tn_Paths;
     bool T_terminate=false, isTask = false;
         
     // wait for tasks or terminate on cv_m2s
@@ -362,11 +393,12 @@ static bool BD_paths_NOVEC_T (TCircuit *c,
         if (isTask) {
             isTask = false;
             sumR = sumI = 0.f;
+            Tn_Paths = 0ull;
             // process
 #ifdef NON_ZERO_PATHS
-            BD_paths_NOVEC_kernel(c, init_state, final_state, n_samples, sumR, sumI, n_Paths, e, d, non_zero_paths);
+            BD_paths_NOVEC_kernel(c, init_state, final_state, n_samples, sumR, sumI, Tn_Paths, MIS, e, d, non_zero_paths);
 #else
-            BD_paths_NOVEC_kernel(c, init_state, final_state, n_samples, sumR, sumI, n_Paths, e, d);
+            BD_paths_NOVEC_kernel(c, init_state, final_state, n_samples, sumR, sumI, Tn_Paths, MIS, e, d);
 #endif
             
             // we have a result
@@ -378,6 +410,7 @@ static bool BD_paths_NOVEC_T (TCircuit *c,
                 std::lock_guard<std::mutex> lk_s2m(mx_s2m);
                 T_sumR = sumR;  // send results
                 T_sumI = sumI;  // send results
+                n_Paths = Tn_Paths;
                 processedSamples = n_samples;
                 resAvailable = true;  // there is a result
             }  // lk_s2m terminates, thus mx_s2m is released by the lock destructor
@@ -396,7 +429,7 @@ static bool BD_paths_NOVEC_T (TCircuit *c,
 static bool BD_paths_NOVEC_kernel (TCircuit *c,
                 unsigned long long init_state, unsigned long long final_state, const unsigned long long n_samples,
                 float &sumR, float &sumI,
-                unsigned long long& n_Paths,
+                unsigned long long& n_Paths, const bool MIS,
                 std::default_random_engine& e, std::uniform_real_distribution<float>& d,
                                    int& non_zero_paths) {
 #else
@@ -404,7 +437,7 @@ static bool BD_paths_NOVEC_kernel (TCircuit *c,
                                     unsigned long long init_state, unsigned long long final_state,
                                    const unsigned long long n_samples,
                                     float &sumR, float &sumI,
-                                   unsigned long long& n_Paths,
+                                   unsigned long long& n_Paths, const bool MIS,
                                    std::default_random_engine& e, std::uniform_real_distribution<float>& d) {
 #endif
     unsigned long long s;   // sample counter
@@ -438,21 +471,21 @@ static bool BD_paths_NOVEC_kernel (TCircuit *c,
         }
         fprintf (stderr, "||\n");
         fprintf (stderr, "\n");
-        fprintf (stderr, "%.5f + i %.5f ", Fpath_PwR[0], Fpath_PwI[0]);
+        fprintf (stderr, "%.5f + i %.5f ", Fpath_wR[0], Fpath_wI[0]);
         for (l=1 ; l< L ; l++) {
-            fprintf (stderr, "-> %.5f + i %.5f ", Fpath_PwR[l], Fpath_PwI[l]);
+            fprintf (stderr, "-> %.5f + i %.5f ", Fpath_wR[l], Fpath_wI[l]);
         }
         fprintf (stderr, "||\n");
         fprintf (stderr, "\n");
-        fprintf (stderr, "%.5f ", Fpath_Pprob[0]);
+        fprintf (stderr, "%.5f ", Fpath_prob[0]);
         for (l=1 ; l< L ; l++) {
-            fprintf (stderr, "-> %.5f ", Fpath_Pprob[l]);
+            fprintf (stderr, "-> %.5f ", Fpath_prob[l]);
         }
         fprintf (stderr, "||\n");
 #endif
         std::vector<unsigned long long> Bpath;
         std::vector<float> Bpath_wR, Bpath_wI, Bpath_PwR, Bpath_PwI, Bpath_prob, Bpath_Pprob;
-        _BackwardPath (c, init_state, Bpath, Bpath_wR, Bpath_wI, Bpath_PwR, Bpath_PwI, Bpath_prob, Bpath_Pprob, e, d);
+        _BackwardPath (c, final_state, Bpath, Bpath_wR, Bpath_wI, Bpath_PwR, Bpath_PwI, Bpath_prob, Bpath_Pprob, e, d);
         
 #ifdef DEBUG
         //print_path(Bpath);
@@ -463,15 +496,15 @@ static bool BD_paths_NOVEC_kernel (TCircuit *c,
         }
         fprintf (stderr, "\n");
         fprintf (stderr, "\n");
-        fprintf (stderr, "||\t%.5f + i %.5f ", Bpath_PwR[1], Bpath_PwI[1]);
+        fprintf (stderr, "||\t%.5f + i %.5f ", Bpath_wR[1], Bpath_wI[1]);
         for (l=2 ; l<= L ; l++) {
-            fprintf (stderr, "<- %.5f + i %.5f ", Bpath_PwR[l], Bpath_PwI[l]);
+            fprintf (stderr, "<- %.5f + i %.5f ", Bpath_wR[l], Bpath_wI[l]);
         }
         fprintf (stderr, "\n");
         fprintf (stderr, "\n");
-        fprintf (stderr, "||\t%.5f ", Bpath_Pprob[1]);
+        fprintf (stderr, "||\t%.5f ", Bpath_prob[1]);
         for (l=2 ; l<= L ; l++) {
-            fprintf (stderr, "<- %.5f ", Bpath_Pprob[l]);
+            fprintf (stderr, "<- %.5f ", Bpath_prob[l]);
         }
         fprintf (stderr, "\n");
         fprintf (stderr, "\n");
@@ -496,12 +529,20 @@ static bool BD_paths_NOVEC_kernel (TCircuit *c,
             }
             fprintf (stderr, "\n");
 #endif
-            // connect deterministically fPath to bPath through layer l
-            prob = _ConnectPath (layer, l,
-                             currentState, Fpath_PwR[l], Fpath_PwI[l], Fpath_Pprob[l],
-                             nextState, Bpath_PwR[l+1], Bpath_PwI[l+1], Bpath_Pprob[l+1],
-                             wR, wI);
-
+            if (MIS) {
+                // connect deterministically fPath to bPath through layer l using MIS
+                prob = _ConnectPathMIS (layer, l, L,
+                                     Fpath, Fpath_PwR[l], Fpath_PwI[l], Fpath_prob, Fpath_Pprob,
+                                     Bpath, Bpath_PwR[l+1], Bpath_PwI[l+1], Bpath_prob, Bpath_Pprob,
+                                     wR, wI);
+            }
+            else {
+                // connect deterministically fPath to bPath through layer l
+                prob = _ConnectPath (layer, l,
+                                 currentState, Fpath_PwR[l], Fpath_PwI[l], Fpath_Pprob[l],
+                                 nextState, Bpath_PwR[l+1], Bpath_PwI[l+1], Bpath_Pprob[l+1],
+                                 wR, wI);
+            }
 #ifdef DEBUG
             fprintf (stderr, "\tw = %.5f + i %.5f \t prob = %.5f\n\n", wR, wI, prob);
 #endif
@@ -639,6 +680,92 @@ static void _BackwardPath (TCircuit *c, unsigned long long final_state,
     
     return;
 }
+    
+static float _ConnectPathMIS (TCircuitLayer* layer, const int l, const int num_layers,
+                         std::vector<unsigned long long> Fpath,
+                           float Fpath_PwR, float Fpath_PwI, std::vector<float> Fpath_prob, std::vector<float> Fpath_Pprob,
+                            std::vector<unsigned long long> Bpath,
+                           float Bpath_PwR, float Bpath_PwI, std::vector<float> Bpath_prob, std::vector<float> Bpath_Pprob,
+                                  float& wR, float& wI) {
+    float lwR, lwI, prob;
+    unsigned long long currentState, nextState;
+    
+    currentState = Fpath[l];
+    nextState = Bpath[l+1];
+    prob = layer_w_prob (layer, l, currentState, nextState, lwR, lwI);
+    
+#ifdef DEBUG
+    fprintf (stderr, "\nCONNECT_MIS\n");
+    fprintf (stderr, "Fsegment Pw = %.5f + i %.5f\n", Fpath_PwR, Fpath_PwI);
+    fprintf (stderr, "C layer w = %e + i %e\n", lwR, lwI);
+    fprintf (stderr, "Bsegment Pw = %.5f + i %.5f\n", Bpath_PwR, Bpath_PwI);
+    fprintf (stderr, "C prob = %e \n", prob);
+#endif
+
+    
+    // compute path w
+    complex_multiply(lwR, lwI, lwR, lwI, Fpath_PwR, Fpath_PwI);
+    complex_multiply(lwR, lwI, lwR, lwI, Bpath_PwR, Bpath_PwI);
+
+    if (complex_abs_square(lwR, lwI) <=0.f) { // terminate path
+        wR = 0.f;
+        wI = 0.f;
+        return 0.f;
+    }
+
+#ifdef DEBUG
+    fprintf (stderr, "Path w = %.5f + i %.5f\n", lwR, lwI);
+#endif
+
+ 
+    // store probablities in a vector
+    // compute product of all probabilities (to be used only after excluding (dividing) one per iteration)
+    std::vector<float> path_probs;
+    for (int ll=0 ; ll < l+1  ; ll++ ) {  // forward
+        path_probs.push_back(Fpath_prob[ll]);
+    }
+    path_probs.push_back(prob);   // current layer
+    for (int ll=l+2 ; ll <= num_layers  ; ll++ ) {  // forward
+        path_probs.push_back(Bpath_prob[ll]);
+    }
+#ifdef DEBUG
+    fprintf (stderr, "Path probs = [ %e ", path_probs[0]);
+    for (int ll=1 ; ll <= num_layers ; ll++)
+        fprintf (stderr, ", %e ", path_probs[ll]);
+    fprintf (stderr, "]\n");
+#endif
+
+    // compute MIS_weight as the sum of
+    // the probabilities of the num_layers alternative deterministic connections
+    float MIS_weight_reciprocal = 0.f;
+    for (int det_connect=0 ; det_connect < num_layers ; det_connect++) {
+        float prob_prod=1.f ;
+        // compute probability with deterministic transition across layer det_connect
+        for (int ll=0 ; ll <= num_layers ; ll++) {
+            prob_prod *= ((det_connect+1) == ll ? 1.f : path_probs[ll]);
+        }
+        /*prob_prod = Fpath_Pprob[det_connect];
+        prob_prod *= prob;
+        prob_prod *= Bpath_Pprob[det_connect+1];*/
+        MIS_weight_reciprocal += prob_prod;
+#ifdef DEBUG
+    fprintf (stderr, "Path prob with det connection layer %d = %e \n", det_connect, prob_prod);
+#endif
+    }
+    // divide the above sum by the number of summands
+    // note: we divide because we are computing the reciprocal of the MIS_weight
+    MIS_weight_reciprocal /= num_layers;
+
+#ifdef DEBUG
+    fprintf (stderr, "MIS weight reciprocal = %e \n", MIS_weight_reciprocal   );
+#endif
+
+    wR = lwR;
+    wI = lwI;
+    
+    return MIS_weight_reciprocal;
+
+}
 
 static float _ConnectPath (TCircuitLayer* layer, const int l,
                        unsigned long long currentState,
@@ -659,7 +786,7 @@ static float _ConnectPath (TCircuitLayer* layer, const int l,
     complex_multiply(lwR, lwI, lwR, lwI, Bpath_PwR, Bpath_PwI);
     complex_multiply(lwR, lwI, lwR, lwI, Fpath_PwR, Fpath_PwI);
 
-    // prob = Fpath_Pprob * 1.0 * Bpath_Pprob)
+    // prob = Fpath_Pprob * 1.0 * Bpath_Pprob
     prob = Fpath_Pprob * Bpath_Pprob;
     wR = lwR;
     wI = lwI;

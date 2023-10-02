@@ -18,11 +18,11 @@
 #ifdef CONVERGENCE_STATS
 bool BD_paths (TCircuit *c, unsigned long long init_state,
                 unsigned long long final_state, const unsigned long long n_samples,
-               float &estimateR, float &estimateI, std::vector<T_Stats>& stats, const int n_threads=1);
+               float &estimateR, float &estimateI, std::vector<T_Stats>& stats, const int n_threads=1, const bool MIS=true);
 #else
 bool BD_paths (TCircuit *c, unsigned long long init_state,
                     unsigned long long final_state, const unsigned long long n_samples,
-                   float &estimateR, float &estimateI, const int n_threads=1) ;
+                   float &estimateR, float &estimateI, const int n_threads=1, const bool MIS=true) ;
 #endif
 
 

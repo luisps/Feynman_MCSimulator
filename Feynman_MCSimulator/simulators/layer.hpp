@@ -18,6 +18,10 @@
 void layer_w (TCircuitLayer *layer, int l,
               unsigned long long current_state, unsigned long long next_state, float &wR, float &wI);
 
+float layer_w_prob (TCircuitLayer *layer, int l,
+              unsigned long long current_state, unsigned long long next_state, float &wR, float &wI);
+
+
 float layer_sample (TCircuitLayer* layer, int l, unsigned long long current_state,
                     unsigned long long& next_state,
                     float& wR, float& wI,

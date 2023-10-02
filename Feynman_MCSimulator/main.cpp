@@ -27,9 +27,6 @@ using namespace std::chrono;
 
 static bool check_command_line(int, const char * []);
 static void print_usage (void);
-#ifdef CONVERGENCE_STATS
-static void save_stats (std::vector<T_Stats>, bool, float, float);
-#endif
 
 
 static char fileName[1024], csv_amplitude_fileName[1024];
@@ -42,8 +39,13 @@ static bool CSV_amplitude_verification = false;
 enum TAlgorithms {
     ALL_PATHS=1,
     IS_FORWARD=2,
-    BD_SAMPLE=3
+    BD_SAMPLE=3,
+    BD_MIS=4
 } ;
+
+#ifdef CONVERGENCE_STATS
+static void save_stats (std::vector<T_Stats>, bool, float, float, TAlgorithms );
+#endif
 
 static TAlgorithms algorithm;
 
@@ -65,7 +67,7 @@ int main(int argc, const char * argv[]) {
     else fprintf (stdout, "read_circuit() OK!\n");
     
     #ifdef DEBUG
-        print_circuit(circuit);
+    //    print_circuit(circuit);
     #endif
     print_circuit_stats (circuit);
     fprintf(stdout, "\n");
@@ -121,9 +123,16 @@ int main(int argc, const char * argv[]) {
                     break;
                 case BD_SAMPLE:
 #ifdef CONVERGENCE_STATS
-                    ret = BD_paths (circuit, init_state, final_state, n_samples, estimateR, estimateI, stats, n_threads);
+                    ret = BD_paths (circuit, init_state, final_state, n_samples, estimateR, estimateI, stats, n_threads, false);
 #else
-                    ret = BD_paths (circuit, init_state, final_state, n_samples, estimateR, estimateI, n_threads);
+                    ret = BD_paths (circuit, init_state, final_state, n_samples, estimateR, estimateI, n_threads, false);
+#endif
+                    break;
+                case BD_MIS:
+#ifdef CONVERGENCE_STATS
+                    ret = BD_paths (circuit, init_state, final_state, n_samples, estimateR, estimateI, stats, n_threads, true);
+#else
+                    ret = BD_paths (circuit, init_state, final_state, n_samples, estimateR, estimateI, n_threads, true);
 #endif
                     break;
 
@@ -169,7 +178,10 @@ int main(int argc, const char * argv[]) {
                     }
                 }
                 if (CSV_found) {
-                    fprintf (stdout,"< %llu | U | %llu > = %f + i %f TRUE AMPLITUDE L2 error=%f\n\n", final_state, init_state, CSV_Ar, CSV_Ai, complex_abs(estimateR-CSV_Ar, estimateI-CSV_Ai));
+                    fprintf (stdout,"< %llu | U | %llu > = %f + i %f TRUE AMPLITUDE L2 error=%f\n", final_state, init_state, CSV_Ar, CSV_Ai, complex_abs(estimateR-CSV_Ar, estimateI-CSV_Ai));
+                    const float varR = (estimateR-CSV_Ar)*(estimateR-CSV_Ar);
+                    const float varI = (estimateI-CSV_Ai)*(estimateI-CSV_Ai);
+                    fprintf (stdout,"Estimate variance = %e\n\n", varR+varI);
                 } else {
                     fprintf (stdout,"< %llu | U | %llu > TRUE AMPLITUDE not found in CSV\n\n", final_state, init_state);
                 }
@@ -179,8 +191,8 @@ int main(int argc, const char * argv[]) {
             
 #ifdef CONVERGENCE_STATS
             // print / save stats
-            if ((algorithm==IS_FORWARD || algorithm==BD_SAMPLE) && n_threads > 1) {
-                save_stats (stats, CSV_found, CSV_Ar, CSV_Ai);
+            if ((algorithm==IS_FORWARD || algorithm==BD_SAMPLE || algorithm==BD_MIS) && n_threads > 1) {
+                save_stats (stats, CSV_found, CSV_Ar, CSV_Ai, algorithm);
             }
 #endif
 
@@ -251,6 +263,9 @@ static bool check_command_line(int argc, const char * argv[]) {
         case 3:    // BiDirectional Sampling
             algorithm = BD_SAMPLE;
             break;
+        case 4:    // BiDirectional Sampling MIS
+            algorithm = BD_MIS;
+            break;
         default:
             fprintf (stderr, "Error; <algorithm> :\n\t\t1 - ALL_PATHS\n\t\t2 - FORWARD IMPORTANCE SAMPLING\n!");
             print_usage();
@@ -293,7 +308,7 @@ static bool check_command_line(int argc, const char * argv[]) {
         n_samples = ((unsigned long long)(1ull << exp2));
         fprintf (stderr, "Number of samples = %llu\n", n_samples);
     }
-    else if (algorithm==IS_FORWARD) {
+    else if (algorithm!=ALL_PATHS) {
         fprintf (stderr, "Number of samples not specified in command line. Defaulting to %llu\n", n_samples);
     }
 
@@ -314,6 +329,9 @@ static void save_stats (std::vector<T_Stats> stats, bool true_exists, float true
         case BD_SAMPLE:
             snprintf(alg_str, 16, "BD");
             break;
+        case BD_MIS:
+            snprintf(alg_str, 16, "BD_MIS");
+            break;
         default:
             snprintf(alg_str, 16, "UKNOWN");
             break;
@@ -324,22 +342,24 @@ static void save_stats (std::vector<T_Stats> stats, bool true_exists, float true
 
     if (true_exists) {
         fprintf (f, "trueR , trueI\n%f , %f\n", trueR, trueI);
-        fprintf (f, "n_samples , estimateR , estimateI, varianceR, varianceI\n");
+        fprintf (f, "n_samples , n_paths , estimateR , estimateI, varianceR, varianceI\n");
     } else
-        fprintf (f, "n_samples , estimateR , estimateI\n");
+        fprintf (f, "n_samples , n_paths , estimateR , estimateI\n");
 
     for (auto & stat : stats) {
         // compute running estimate
-        stat_estimateR = stat.sumR / ((float)stat.n_samples);
-        stat_estimateI = stat.sumI / ((float)stat.n_samples);
+        stat_estimateR = stat.sumR / ((float)stat.n_Paths);
+        stat_estimateI = stat.sumI / ((float)stat.n_Paths);
         
         if (true_exists) {
             varR = (stat_estimateR-trueR)*(stat_estimateR-trueR);
             varI = (stat_estimateI-trueI)*(stat_estimateI-trueI);
-            fprintf (f, "%llu , %f , %f, %f, %f\n", stat.n_samples, stat_estimateR, stat_estimateI, varR, varI);
+            // keep in mind that variance is the sum of the real and complex variances
+            // we are storing both terms separated here to allow for posterior processing
+            fprintf (f, "%llu , %llu , %f , %f, %f, %f\n", stat.n_samples, stat.n_Paths, stat_estimateR, stat_estimateI, varR, varI);
         }
         else {
-            fprintf (f, "%llu , %f , %f\n", stat.n_samples, stat_estimateR, stat_estimateI);
+            fprintf (f, "%llu , %llu , %f , %f\n", stat.n_samples, stat.n_Paths, stat_estimateR, stat_estimateI);
         }
     }
     fclose (f);

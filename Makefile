@@ -1,9 +1,10 @@
-CXX      := -icx
-CXXFLAGS := 
+CXX      := g++
+CXXFLAGS := -pthread
 LDFLAGS  := 
 BUILD    := ./build
 OBJ_DIR  := $(BUILD)/objects
 APP_DIR  := $(BUILD)/apps
+SHELL	 := /bin/bash
 TARGET   := Feynman
 INCLUDE  := -IFeynman_MCSimulator/simulators/ -IFeynman_MCSimulator/ -Icsv-parser/single_include/
 SRC      :=                      \
@@ -14,14 +15,16 @@ OBJECTS  := $(SRC:%.cpp=$(OBJ_DIR)/%.o)
 DEPENDENCIES \
          := $(OBJECTS:.o=.d)
 
-all: build $(APP_DIR)/$(TARGET)
+all:	build $(APP_DIR)/$(TARGET)
 
 $(OBJ_DIR)/%.o: %.cpp
 	@mkdir -p $(@D)
+	module load gcc-11.3 ; \
 	$(CXX) $(CXXFLAGS) $(INCLUDE) -c $< -MMD -o $@
 
 $(APP_DIR)/$(TARGET): $(OBJECTS)
 	@mkdir -p $(@D)
+	module load gcc-11.3 ; \
 	$(CXX) $(CXXFLAGS) -o $(APP_DIR)/$(TARGET) $^ $(LDFLAGS)
 
 -include $(DEPENDENCIES)

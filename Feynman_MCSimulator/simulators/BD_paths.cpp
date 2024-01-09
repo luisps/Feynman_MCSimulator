@@ -11,6 +11,7 @@
 #include <mutex>
 #include <condition_variable>
 #include <vector>
+#include <algorithm>
 #include <random>
 
 #include "complex.h"
@@ -670,13 +671,13 @@ static void _BackwardPath (TCircuit *c, unsigned long long final_state,
     Bpath_prob.push_back (0.f);
     Bpath_Pprob.push_back (0.f);
     
-    reverse(Bpath.begin(), Bpath.end());
-    reverse(Bpath_wR.begin(), Bpath_wR.end());
-    reverse(Bpath_wI.begin(), Bpath_wI.end());
-    reverse(Bpath_PwR.begin(), Bpath_PwR.end());
-    reverse(Bpath_PwI.begin(), Bpath_PwI.end());
-    reverse(Bpath_prob.begin(), Bpath_prob.end());
-    reverse(Bpath_Pprob.begin(), Bpath_Pprob.end());
+    std::reverse(Bpath.begin(), Bpath.end());
+    std::reverse(Bpath_wR.begin(), Bpath_wR.end());
+    std::reverse(Bpath_wI.begin(), Bpath_wI.end());
+    std::reverse(Bpath_PwR.begin(), Bpath_PwR.end());
+    std::reverse(Bpath_PwI.begin(), Bpath_PwI.end());
+    std::reverse(Bpath_prob.begin(), Bpath_prob.end());
+    std::reverse(Bpath_Pprob.begin(), Bpath_Pprob.end());
     
     return;
 }

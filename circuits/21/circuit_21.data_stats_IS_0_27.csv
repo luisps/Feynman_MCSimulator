@@ -1,0 +1,4 @@
+trueR , trueI
+0.226961 , 0.064374
+n_samples , n_paths , estimateR , estimateI, varianceR, varianceI
+32 , 32 , 0.225776 , 0.064038, 0.000001, 0.000000

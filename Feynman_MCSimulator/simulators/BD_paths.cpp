@@ -40,7 +40,7 @@ static bool BD_paths_NOVEC_T (TCircuit *c,
 #else
 static bool BD_paths_NOVEC_NOT (TCircuit *c,
                 unsigned long long init_state, unsigned long long final_state, const unsigned long long n_samples,
-                float &sumR, float &sumI, unsigned long long& n_Pathsconst bool MIS, );
+                float &sumR, float &sumI, unsigned long long& n_Paths, const bool MIS);
 static bool BD_paths_NOVEC_T (TCircuit *c,
                 unsigned long long init_state, unsigned long long final_state, unsigned long long& samples2proc, bool& taskReady, bool& resAvailable, float& T_sumR, float& T_sumI, unsigned long long& n_Paths, unsigned long long& processedSamples, const bool MIS);
 #endif
@@ -725,12 +725,12 @@ static float _ConnectPathMIS (TCircuitLayer* layer, const int l, const int num_l
         path_probs.push_back(Fpath_prob[ll]);
     }
     path_probs.push_back(prob);   // current layer
-    for (int ll=l+2 ; ll <= num_layers  ; ll++ ) {  // forward
+    for (int ll=l+1 ; ll <= num_layers  ; ll++ ) {  // forward
         path_probs.push_back(Bpath_prob[ll]);
     }
 #ifdef DEBUG
     fprintf (stderr, "Path probs = [ %e ", path_probs[0]);
-    for (int ll=1 ; ll <= num_layers ; ll++)
+    for (int ll=1 ; ll <= num_layers+1 ; ll++)
         fprintf (stderr, ", %e ", path_probs[ll]);
     fprintf (stderr, "]\n");
 #endif
@@ -741,7 +741,7 @@ static float _ConnectPathMIS (TCircuitLayer* layer, const int l, const int num_l
     for (int det_connect=0 ; det_connect < num_layers ; det_connect++) {
         float prob_prod=1.f ;
         // compute probability with deterministic transition across layer det_connect
-        for (int ll=0 ; ll <= num_layers ; ll++) {
+        for (int ll=0 ; ll <= num_layers+1 ; ll++) {
             prob_prod *= ((det_connect+1) == ll ? 1.f : path_probs[ll]);
         }
         /*prob_prod = Fpath_Pprob[det_connect];

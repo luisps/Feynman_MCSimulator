@@ -15,6 +15,7 @@
  */
 
 //#define DEBUG
+//#define DEBUG_LAYER
 
 /*
  * define the pre processor variable below to compile
@@ -31,7 +32,7 @@
  *
  */
 
-#define NON_ZERO_PATHS
+//#define NON_ZERO_PATHS
 
 #ifdef NON_ZERO_PATHS
 typedef struct path_desc {
@@ -50,10 +51,12 @@ typedef struct path_desc {
 //#define CONVERGENCE_STATS
 
 #ifdef CONVERGENCE_STATS
+
 typedef struct T_Stats_s {
     unsigned long long n_samples;
     unsigned long long n_Paths;
     float sumR, sumI;
+    long long time_us;
 } T_Stats;
 #endif
 

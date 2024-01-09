@@ -267,6 +267,7 @@ float layer_sample (TCircuitLayer* layer, int l, unsigned long long current_stat
         const int curr_state_qb = qb_value(qb_nbr, current_state);
         const float rnd = d(e);  // generate random nbr in [0, 1[
 
+
 #ifdef DEBUG_LAYER
             fprintf (stderr, "\tgate name: %d; curr: qb_nbr = %d -> qb=%d\n",gate->fdata.name,qb_nbr, curr_state_qb);
             fprintf(stderr, "\t\trnd = %f\n", rnd);

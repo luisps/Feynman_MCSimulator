@@ -20,6 +20,7 @@ using namespace std::chrono;
 #include "all_paths.hpp"
 #include "IS_paths.hpp"
 #include "BD_paths.hpp"
+//#include "BD_paths_Debug.hpp"
 #include "complex.h"
 #include "csv.hpp"   // from https://github.com/vincentlaucsb/csv-parser
 
@@ -74,6 +75,9 @@ int main(int argc, const char * argv[]) {
     fprintf(stderr, "\n");
     fflush(stderr);
     fflush(stdout);
+    
+    const float Tpaths = powf(2.f, (float)(circuit->size->num_qubits*(circuit->size->num_layers-1)));
+    fprintf (stdout, "There are %.0f different paths from PSI_0 to PSI_f\n\n", Tpaths);
     
  
     static unsigned long long init_state_range_start, init_state_range_end;
@@ -209,6 +213,7 @@ static void print_usage (void) {
     fprintf (stderr, "program <circuit_file> <algorithm> <init_state> <final_state> <n_threads> <arg1>\n\n");
     fprintf (stderr, "\t <circuit_file> - name of .data file describing the circuit to simulate (without the extension)\n");
     fprintf (stderr, "\t <algorithm> :\n\t\t1 - ALL_PATHS\n\t\t2 - FORWARD IMPORTANCE SAMPLING\n");
+    fprintf (stderr, "\t\t3 - BIDIRECTIONAL IMPORTANCE SAMPLING\n\t\t4 - BIDIRECTIONAL IMPORTANCE SAMPLING WITH MIS\n");
     fprintf (stderr, "\t <init_state> : integer; if 'a' executed for all possible input states!\n");
     fprintf (stderr, "\t <final_state> : integer; if 'a' executed for all possible final states!\n");
     fprintf (stderr, "\t <arg1> :\n\t\tif algorithm = FORWARD IMPORTANCE SAMPLING then log2 number of samples\n");

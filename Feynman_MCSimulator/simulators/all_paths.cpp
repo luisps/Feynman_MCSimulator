@@ -137,8 +137,8 @@ static bool all_paths_NOVEC_T (TCircuit *c,
        We will do L-3 for loops in a single aggregated while loop:
        . the outer most loop (l=0) is implemented as a for loop,
          thus allowing FOR LOOP parallelism
-         the conter associated with this outer 'for' loop is ndxs[0]
-       . the inner most 'for' loop (corresponding to L-1 (just before trransitioning
+         the counter associated with this outer 'for' loop is ndxs[0]
+       . the inner most 'for' loop (corresponding to L-1 (just before transitioning
          to the final state) is still implememnted with a 'for' loop
          the counter associated with this inner most 'for' is 'next_state'
      */

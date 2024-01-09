@@ -5,7 +5,7 @@ BUILD    := ./build
 OBJ_DIR  := $(BUILD)/objects
 APP_DIR  := $(BUILD)/apps
 TARGET   := Feynman
-INCLUDE  := -IFeynman_MCSimulator/simulators/ -IFeynman_MCSimulator/
+INCLUDE  := -IFeynman_MCSimulator/simulators/ -IFeynman_MCSimulator/ -Icsv-parser/single_include/
 SRC      :=                      \
    $(wildcard Feynman_MCSimulator/simulators/*.cpp) \
    $(wildcard Feynman_MCSimulator/*.cpp)         \

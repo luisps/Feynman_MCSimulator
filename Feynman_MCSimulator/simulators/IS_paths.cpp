@@ -282,11 +282,11 @@ bool IS_paths (TCircuit *c, unsigned long long init_state,
         estimateI = sumI / n_samples;
     }
 
-    fprintf (stderr, "Total samples: %llu\n", n_ProcessedSamples);
+    fprintf (stdout, "Total samples: %llu\n", n_ProcessedSamples);
 #ifdef NON_ZERO_PATHS
-    fprintf (stderr, "Non zero paths: %d\n", non_zero_paths);
+    fprintf (stdout, "Non zero paths: %d\n", non_zero_paths);
 #endif
-    fprintf (stderr, "Total paths: %llu\n", n_samples);
+    fprintf (stdout, "Total paths: %llu\n", n_samples);
     
     return ret;
 }

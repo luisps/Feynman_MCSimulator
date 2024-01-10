@@ -8,7 +8,7 @@
 #include <iostream>
 #include <cstdlib>
 #include <stdlib.h>
-//#include <string>
+#include <string.h>
 
 using namespace std;
 
@@ -20,7 +20,6 @@ using namespace std::chrono;
 #include "all_paths.hpp"
 #include "IS_paths.hpp"
 #include "BD_paths.hpp"
-//#include "BD_paths_Debug.hpp"
 #include "complex.h"
 #include "csv.hpp"   // from https://github.com/vincentlaucsb/csv-parser
 
@@ -65,16 +64,12 @@ int main(int argc, const char * argv[]) {
         fprintf (stderr, "read_circuit() failed!\n");
         return 1;
     }
-    else fprintf (stdout, "read_circuit() OK!\n");
+    //else fprintf (stderr, "read_circuit() OK!\n");
     
     #ifdef DEBUG
     //    print_circuit(circuit);
     #endif
     print_circuit_stats (circuit);
-    fprintf(stdout, "\n");
-    fprintf(stderr, "\n");
-    fflush(stderr);
-    fflush(stdout);
     
     const float Tpaths = powf(2.f, (float)(circuit->size->num_qubits*(circuit->size->num_layers-1)));
     fprintf (stdout, "There are %.0f different paths from PSI_0 to PSI_f\n\n", Tpaths);
@@ -247,7 +242,7 @@ static bool check_command_line(int argc, const char * argv[]) {
             CSV_amplitude_verification = false;
         }
         else {
-            fprintf (stderr, "CSV file exists: will check accuracy\n");
+            fprintf (stdout, "CSV file exists: will check accuracy\n");
             fclose (f);
             CSV_amplitude_verification = true;
         }
@@ -261,15 +256,19 @@ static bool check_command_line(int argc, const char * argv[]) {
     switch (atoi(argv[2])) {
         case 1:    // ALL_PATHS
             algorithm = ALL_PATHS;
+            fprintf (stdout, "Algorithm :\tALL_PATHS\n");
             break;
         case 2:    // Importance Sampling FORWARD
             algorithm = IS_FORWARD;
+            fprintf (stdout, "Algorithm :\tFORWARD IMPORTANCE SAMPLING\n");
             break;
         case 3:    // BiDirectional Sampling
             algorithm = BD_SAMPLE;
+            fprintf (stdout, "Algorithm :\tBIDIRECTIONAL IMPORTANCE SAMPLING\n");
             break;
         case 4:    // BiDirectional Sampling MIS
             algorithm = BD_MIS;
+            fprintf (stdout, "Algorithm :\tBIDIRECTIONAL IMPORTANCE SAMPLING WITH MIS\n");
             break;
         default:
             fprintf (stderr, "Error; <algorithm> :\n\t\t1 - ALL_PATHS\n\t\t2 - FORWARD IMPORTANCE SAMPLING\n!");
@@ -306,12 +305,12 @@ static bool check_command_line(int argc, const char * argv[]) {
             n_threads=atoi(argv[5]);
         }
     }
-    fprintf (stderr, "Number of threads = %d\n", n_threads);
+    fprintf (stdout, "Number of threads = %d\n", n_threads);
 
     if (argc>6) { // set the nbr of samples
         int exp2 = atoi(argv[6]);
         n_samples = ((unsigned long long)(1ull << exp2));
-        fprintf (stderr, "Number of samples = %llu\n", n_samples);
+        fprintf (stdout, "Number of samples = %llu\n", n_samples);
     }
     else if (algorithm!=ALL_PATHS) {
         fprintf (stderr, "Number of samples not specified in command line. Defaulting to %llu\n", n_samples);

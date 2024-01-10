@@ -24,6 +24,7 @@ $(OBJ_DIR)/%.o: %.cpp
 
 $(APP_DIR)/$(TARGET): $(OBJECTS)
 	@mkdir -p $(@D)
+	@mv Feynman_MCSimulator/myFeynman.sh $(APP_DIR)
 	module load gcc-11.3 ; \
 	$(CXX) $(CXXFLAGS) -o $(APP_DIR)/$(TARGET) $^ $(LDFLAGS)
 

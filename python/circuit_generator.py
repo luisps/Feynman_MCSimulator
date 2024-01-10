@@ -436,6 +436,13 @@ def get_circuit(ID, *args):
         qc = my_random_circuit(num_qubits=num_qubits, depth=depth, max_operands=2, measure=False, seed=393)
         layers, num_layers = QCircuit_to_layers (qc)
         return qc, qc.num_qubits, layers, num_layers
+    elif ID==23:  #random circuit with H, S, T and CNOT gates ; %of H is given as args[2]
+        num_qubits = args[0]
+        depth = args[1]
+        Hpercent = args[2]
+        qc = my_random_circuit_Cliff_T(num_qubits=num_qubits, depth=depth, max_operands=2, Hpercent= Hpercent, measure=False, seed=393)
+        layers, num_layers = QCircuit_to_layers (qc)
+        return qc, qc.num_qubits, layers, num_layers
     elif ID==22:   # IQP
         # generate n x n interactions matrix. The powers of each T gate are given by the diagonal elements of the interactions matrix. The powers of the CS gates are given by the upper triangle of the interactions matrix.
         num_qubits = args[0]
@@ -603,6 +610,85 @@ def my_random_circuit(
             op = operation(*angles)
 
             qc.append(op, register_operands)
+
+    if measure:
+        qc.measure(qr, cr)
+
+    return qc
+
+def my_random_circuit_Cliff_T(
+    num_qubits, depth, max_operands=2, Hpercent=0.3, measure=False, seed=None
+):
+    """Generate random circuit of arbitrary size and form.
+
+    This function will generate a random circuit by randomly selecting gates
+    from the set of standard gates in :mod:`qiskit.extensions`. For example:
+
+    .. jupyter-execute::
+
+        from qiskit.circuit.random import random_circuit
+
+        circ = random_circuit(2, 2, measure=True)
+        circ.draw(output='mpl')
+
+    Args:
+        num_qubits (int): number of quantum wires
+        depth (int): layers of operations (i.e. critical path length)
+        max_operands (int): maximum operands of each gate (between 1 and 2)
+        Hpercent (float): percentage of Hadamards (branching)
+        measure (bool): if True, measure all qubits at the end
+        seed (int): sets random seed (optional)
+
+    Returns:
+        QuantumCircuit: constructed circuit
+
+    Raises:
+        CircuitError: when invalid options given
+    """
+    if max_operands < 1 or max_operands > 2:
+        raise CircuitError("max_operands must be between 1 and 2")
+
+    ops = [
+        HGate,
+        SGate,
+        TGate,
+        CXGate
+    ]
+    
+    ops_ndx = [0, 1, 2, 3]
+    
+    notHpercent = (1.-Hpercent) / 3.
+    select_ops_prob = [Hpercent, notHpercent, notHpercent, notHpercent]
+
+    notHpercent_not2ops = (1.-Hpercent) / 2.
+    select_ops_prob_not2ops = [Hpercent, notHpercent_not2ops, notHpercent_not2ops, 0.]
+
+    qr = QuantumRegister(num_qubits, "q")
+    qc = QuantumCircuit(num_qubits)
+
+    if measure:
+        cr = ClassicalRegister(num_qubits, "c")
+        qc.add_register(cr)
+
+    if seed is None:
+        seed = np.random.randint(0, np.iinfo(np.int32).max)
+    rng = np.random.default_rng(seed)
+
+    # apply arbitrary random operations at every depth
+    for _ in range(depth):
+        # choose either 1 or 2 qubits for the operation
+        remaining_qubits = list(range(num_qubits))
+        rng.shuffle(remaining_qubits)
+        while remaining_qubits:
+            # select the gate
+            max_possible_operands = min(len(remaining_qubits), max_operands)
+            operation_ndx = rng.choice(ops_ndx, p=select_ops_prob if max_possible_operands > 1 else select_ops_prob_not2ops)
+            operation = ops[operation_ndx]
+            num_operands = 1 if operation_ndx <3 else 2
+            operands = [remaining_qubits.pop() for _ in range(num_operands)]
+            register_operands = [qr[i] for i in operands]
+
+            qc.append(operation(), register_operands)
 
     if measure:
         qc.measure(qr, cr)

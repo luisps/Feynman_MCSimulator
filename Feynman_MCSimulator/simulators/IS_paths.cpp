@@ -108,7 +108,7 @@ bool IS_paths (TCircuit *c, unsigned long long init_state,
         
         // MULTIPLE THREADS
         // MASTER WORKER
-        const long long TASK_SIZE=1024ll;
+        const long long TASK_SIZE=n_samples/(64*n_threads);
         long long remaining_samples = (long long)n_samples;
         int busy_threads = 0;   // how many threads have a task
 

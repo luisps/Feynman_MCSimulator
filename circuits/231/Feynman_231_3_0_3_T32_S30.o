@@ -1,12 +1,12 @@
 * ----------------------------------------------------------------
-* Running PROLOG for Feynman on Thu Jan 11 10:00:37 WET 2024
+* Running PROLOG for Feynman on Thu Jan 11 19:07:55 WET 2024
 *    JOB_NAME                : Feynman
-*    JOB_ID                  : 14564202
+*    JOB_ID                  : 14570231
 *    JOB_PARTITION           : fct
 *    JOB_USER                : lpsantos
 *    JOB_ACCOUNT             : cpca095372023
 *    JOB_QOS                 : cpca095372023
-*    NODE_LIST               : hpc080
+*    NODE_LIST               : hpc075
 *    SLURM_NNODES            : 1
 *    SLURM_NPROCS            : 32
 *    SLURM_NTASKS            : 32
@@ -29,9 +29,9 @@ Layers: 8
 There are 40564819207303340847894502572032 different paths from PSI_0 to PSI_f
 
 Total samples: 1073741824
-Non zero paths: 505
+Non zero paths: 256198
 Total paths: 8589934592
-< 3 | U | 0 > = 0.031082 + i 0.009801 	T = 1150.8 s
-< 3 | U | 0 > = 0.013337 + i -0.005524 TRUE AMPLITUDE L2 error=0.023447
-Estimate variance = 5.497698e-04
+< 3 | U | 0 > = 0.070636 + i 0.030518 	T = 184.1 s
+< 3 | U | 0 > = 0.013337 + i -0.005524 TRUE AMPLITUDE L2 error=0.067692
+Estimate variance = 4.582193e-03
 

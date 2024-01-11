@@ -32,7 +32,7 @@
  *
  */
 
-//#define NON_ZERO_PATHS
+#define NON_ZERO_PATHS
 
 #ifdef NON_ZERO_PATHS
 typedef struct path_desc {
@@ -48,7 +48,7 @@ typedef struct path_desc {
  *
  */
 
-//#define CONVERGENCE_STATS
+#define CONVERGENCE_STATS
 
 #ifdef CONVERGENCE_STATS
 

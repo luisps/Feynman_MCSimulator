@@ -1,0 +1,36 @@
+* ----------------------------------------------------------------
+* Running PROLOG for Feynman on Wed Jan 10 17:57:16 WET 2024
+*    JOB_NAME                : Feynman
+*    JOB_ID                  : 14543150
+*    JOB_PARTITION           : fct
+*    JOB_USER                : lpsantos
+*    JOB_ACCOUNT             : cpca095372023
+*    JOB_QOS                 : cpca095372023
+*    NODE_LIST               : hpc082
+*    SLURM_NNODES            : 1
+*    SLURM_NPROCS            : 16
+*    SLURM_NTASKS            : 16
+*    SLURM_CPUS_ON_NODE      : 16
+*    SLURM_TASKS_PER_NODE    : 16
+*    SLURM_JOB_CPUS_PER_NODE : 16
+*    SLURM_MEM_PER_NODE      : 10000
+*    SUBMIT_HOST             : cirrus08.a.incd.pt
+*    WORK_DIR                : /users5/cpca095372023/lpsantos/Feynman_MCSimulator/build/apps
+*    JOB_SCRIPT              : (null)
+* ----------------------------------------------------------------
+CSV file exists: will check accuracy
+Algorithm :	FORWARD IMPORTANCE SAMPLING
+Number of threads = 16
+Number of samples = 4194304
+Filename = ../../circuits/231/circuit_231.data
+Qubits: 15
+Layers: 8
+
+There are 40564819207303340847894502572032 different paths from PSI_0 to PSI_f
+
+Total samples: 4194304
+Total paths: 4194304
+< 3 | U | 0 > = 0.559493 + i 0.705020 	T = 1.2 s
+< 3 | U | 0 > = 0.013337 + i -0.005524 TRUE AMPLITUDE L2 error=0.896192
+Estimate variance = 8.031596e-01
+

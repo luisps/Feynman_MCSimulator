@@ -4,6 +4,7 @@ from qiskit.circuit.parametervector import ParameterVector, ParameterVectorEleme
 from qiskit.circuit import Parameter
 from qiskit import quantum_info as qiskit_info
 
+from HSA import HSA_gen
 
 import random
 from math import pi
@@ -502,6 +503,23 @@ def get_circuit(ID, *args):
         qc.cp(pi/3, 0, 1)
         layers, num_layers = QCircuit_to_layers (qc)
         return qc, qc.num_qubits, layers, num_layers
+    elif ID == 400:   # HSA
+        n = args[0]  # number of qubits
+        # n must be even
+        n -= 0 if n%2==0 else 1
+        n_ccz = args[1]    # implies t_count = 14 * n_ccz
+        g = args[2] # number of Z and CZ gates in the {Z,CZ}-layers in-between Toffoli gates 
+        # Generating a random hidden string
+        s = []
+        for i in range(0,n,2):
+            s.append(0)
+            s.append(1)
+        print (s)
+        random.seed (10000)            
+        qc = HSA_gen (n, n_ccz, g, s, Toffoli= False, measure=False, remove_pairs_H=True)
+        layers, num_layers = QCircuit_to_layers (qc)
+        return qc, qc.num_qubits, layers, num_layers
+
 
         
 ###################

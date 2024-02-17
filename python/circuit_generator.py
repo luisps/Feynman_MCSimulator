@@ -519,6 +519,25 @@ def get_circuit(ID, *args):
         qc = HSA_gen (n, n_ccz, g, s, Toffoli= False, measure=False, remove_pairs_H=True)
         layers, num_layers = QCircuit_to_layers (qc)
         return qc, qc.num_qubits, layers, num_layers
+    elif ID == 4100:   # HSA
+        n = args[0]  # number of qubits
+        # n must be even
+        n -= 0 if n%2==0 else 1
+        n_ccz = args[1]    # implies t_count = 14 * n_ccz
+        g = args[2] # number of Z and CZ gates in the {Z,CZ}-layers in-between Toffoli gates 
+        Y = args[3]
+        # Generating a random hidden string
+        s = [0] * n
+        i = 0
+        while Y>0:
+            s[i] = Y%2
+            Y = Y //2
+            i= i+1
+        print (s)
+        random.seed (10000)            
+        qc = HSA_gen (n, n_ccz, g, s, Toffoli= False, measure=False, remove_pairs_H=True)
+        layers, num_layers = QCircuit_to_layers (qc)
+        return qc, qc.num_qubits, layers, num_layers
 
 
         

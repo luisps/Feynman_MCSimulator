@@ -210,6 +210,7 @@ bool BD_paths (TCircuit *c, unsigned long long init_state,
                     if (resAvailable[t]) {
                         sumR += T_sumR[t];  // retrieve results
                         sumI += T_sumI[t];  // retrieve results
+                        non_zero_paths += l_NzeroP[t];
                         resAvailable[t] = false;  // results read
                         idleThreads[t] = true;  // this thread is now idle
                         n_ProcessedSamples += processedSamples[t];
@@ -285,9 +286,9 @@ bool BD_paths (TCircuit *c, unsigned long long init_state,
         }
             
 #ifdef NON_ZERO_PATHS
-        for (int t=0 ; t< n_threads ; t++) {
+        /*for (int t=0 ; t< n_threads ; t++) {
             non_zero_paths += l_NzeroP[t];
-        }
+        }*/
         delete[] l_NzeroP;
 #endif
         delete[] idleThreads;
@@ -306,7 +307,7 @@ bool BD_paths (TCircuit *c, unsigned long long init_state,
 #ifdef NON_ZERO_PATHS
     fprintf (stdout, "Non zero paths: %d\n", non_zero_paths);
 #endif
-    fprintf (stdout, "Total paths: %llu\n", n_Paths);
+    fprintf (stdout, "Total evaluated paths: %llu\n", n_Paths);
 
     return ret;
 }

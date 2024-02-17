@@ -35,6 +35,8 @@ static bool loop_init_states, loop_final_states;
 static int n_threads=1;
 static unsigned long long n_samples=1ull<<20;
 static bool CSV_amplitude_verification = false;
+static bool true_amplitude_given = false;
+static float true_a_R, true_a_I;
 
 enum TAlgorithms {
     ALL_PATHS=1,
@@ -71,10 +73,17 @@ int main(int argc, const char * argv[]) {
     #endif
     print_circuit_stats (circuit);
     
-    const float Tpaths = powf(2.f, (float)(circuit->size->num_qubits*(circuit->size->num_layers-1)));
-    fprintf (stdout, "There are %.0f different paths from PSI_0 to PSI_f\n\n", Tpaths);
-    
- 
+    const double Tpaths = pow(2.f, (double)(circuit->size->num_qubits*(circuit->size->num_layers-1)));
+    if (isfinite(Tpaths)) {
+        if (Tpaths <= 1e9) {
+            fprintf (stdout, "There are %.0lf different paths from PSI_0 to PSI_f\n\n", Tpaths); }
+        else {
+            fprintf (stdout, "There are %.0e different paths from PSI_0 to PSI_f\n\n", Tpaths); }
+    }
+    else {
+        fprintf (stdout, "There are too many different paths from PSI_0 to PSI_f to be represented as a double\n\n");
+    }
+
     static unsigned long long init_state_range_start, init_state_range_end;
     static unsigned long long final_state_range_start, final_state_range_end;
     const unsigned long long NBR_STATES = 1 << circuit->size->num_qubits;
@@ -101,7 +110,6 @@ int main(int argc, const char * argv[]) {
             
             bool ret;
             float estimateR, estimateI;
-            float CSV_Ar=0.f, CSV_Ai=0.f;
             bool CSV_found = false;
 
             // https://www.geeksforgeeks.org/measure-execution-time-function-cpp/
@@ -161,37 +169,46 @@ int main(int argc, const char * argv[]) {
             else
                 fprintf (stdout, "T = %.1f s\n", ((float)duration.count())/1000000.f);
 
-            if (CSV_amplitude_verification)  {  // compare estimate with true velue from CSV
-                using namespace csv;
-                CSVReader reader(csv_amplitude_fileName);
-                unsigned long long CSV_X;
-
-                for (auto& row: reader) {
-                    // Note: Can also use index of column with [] operator
-                    CSV_X = row["psi0"].get<unsigned long long>();
-                    if (CSV_X==init_state) {
-                        CSV_Ar = row[to_string(final_state)+"r"].get<float>();
-                        CSV_Ai = row[to_string(final_state)+"i"].get<float>();
-                        CSV_found = true;
-                        break;
+            if (CSV_amplitude_verification || true_amplitude_given)  {  // compare estimate with true velue from CSV
+                
+                if (CSV_amplitude_verification) {
+                    using namespace csv;
+                    CSVReader reader(csv_amplitude_fileName);
+                    unsigned long long CSV_X;
+                    
+                    for (auto& row: reader) {
+                        // Note: Can also use index of column with [] operator
+                        CSV_X = row["psi0"].get<unsigned long long>();
+                        if (CSV_X==init_state) {
+                            true_a_R = row[to_string(final_state)+"r"].get<float>();
+                            true_a_I = row[to_string(final_state)+"i"].get<float>();
+                            CSV_found = true;
+                            break;
+                        }
+                    }
+                    if (CSV_found) {
+                        fprintf (stdout,"< %llu | U | %llu > = %f + i %f TRUE AMPLITUDE L2 error=%f\n", final_state, init_state, true_a_R, true_a_I, complex_abs(estimateR-true_a_R, estimateI-true_a_I));
+                        const float varR = (estimateR-true_a_R)*(estimateR-true_a_R);
+                        const float varI = (estimateI-true_a_I)*(estimateI-true_a_I);
+                        fprintf (stdout,"Estimate variance = %e\n\n", varR+varI);
+                    } else {
+                        fprintf (stdout,"< %llu | U | %llu > TRUE AMPLITUDE not found in CSV\n\n", final_state, init_state);
                     }
                 }
-                if (CSV_found) {
-                    fprintf (stdout,"< %llu | U | %llu > = %f + i %f TRUE AMPLITUDE L2 error=%f\n", final_state, init_state, CSV_Ar, CSV_Ai, complex_abs(estimateR-CSV_Ar, estimateI-CSV_Ai));
-                    const float varR = (estimateR-CSV_Ar)*(estimateR-CSV_Ar);
-                    const float varI = (estimateI-CSV_Ai)*(estimateI-CSV_Ai);
+                else {  // true amplitude given in the command line
+                    fprintf (stdout,"< %llu | U | %llu > = %f + i %f TRUE AMPLITUDE L2 error=%f\n", final_state, init_state, true_a_R, true_a_I, complex_abs(estimateR-true_a_R, estimateI-true_a_I));
+                    const float varR = (estimateR-true_a_R)*(estimateR-true_a_R);
+                    const float varI = (estimateI-true_a_I)*(estimateI-true_a_I);
                     fprintf (stdout,"Estimate variance = %e\n\n", varR+varI);
-                } else {
-                    fprintf (stdout,"< %llu | U | %llu > TRUE AMPLITUDE not found in CSV\n\n", final_state, init_state);
-                }
 
-            }  // CSV_amplitude verification
+                }
+            }  // amplitude verification given true amplitude (CSV or command line)
             
             
 #ifdef CONVERGENCE_STATS
             // print / save stats
             if ((algorithm==IS_FORWARD || algorithm==BD_SAMPLE || algorithm==BD_MIS) && n_threads > 1) {
-                save_stats (stats, CSV_found, CSV_Ar, CSV_Ai, algorithm);
+                save_stats (stats, CSV_found || true_amplitude_given, true_a_R, true_a_I, algorithm);
             }
 #endif
 
@@ -205,13 +222,16 @@ int main(int argc, const char * argv[]) {
 static void print_usage (void) {
     
     fprintf (stderr, "\n\n >>> USAGE <<<\n\n");
-    fprintf (stderr, "program <circuit_file> <algorithm> <init_state> <final_state> <n_threads> <arg1>\n\n");
+    fprintf (stderr, "program <circuit_file> <algorithm> <init_state> <final_state> <n_threads> <arg1> [<arg2> <arg3>]\n\n");
     fprintf (stderr, "\t <circuit_file> - name of .data file describing the circuit to simulate (without the extension)\n");
     fprintf (stderr, "\t <algorithm> :\n\t\t1 - ALL_PATHS\n\t\t2 - FORWARD IMPORTANCE SAMPLING\n");
     fprintf (stderr, "\t\t3 - BIDIRECTIONAL IMPORTANCE SAMPLING\n\t\t4 - BIDIRECTIONAL IMPORTANCE SAMPLING WITH MIS\n");
     fprintf (stderr, "\t <init_state> : integer; if 'a' executed for all possible input states!\n");
     fprintf (stderr, "\t <final_state> : integer; if 'a' executed for all possible final states!\n");
-    fprintf (stderr, "\t <arg1> :\n\t\tif algorithm = FORWARD IMPORTANCE SAMPLING then log2 number of samples\n");
+    fprintf (stderr, "\t <n_threads> :\n\t\tNumber of threads (default = 1)\n");
+    fprintf (stderr, "\t <arg1> :\n\t\tif algorithm != ALL_PATHS then log2 number of samples (default = 20 - 2^20 samples)\n");
+    fprintf (stderr, "\t <arg2> :\n\t\tOPTIONAL: true value (REAL) for the transition amplitude\n");
+    fprintf (stderr, "\t <arg3> :\n\t\tOPTIONAL: true value (IM) for the transition amplitude\n");
     fprintf (stderr,"\n\n");
 }
 
@@ -314,6 +334,18 @@ static bool check_command_line(int argc, const char * argv[]) {
     }
     else if (algorithm!=ALL_PATHS) {
         fprintf (stderr, "Number of samples not specified in command line. Defaulting to %llu\n", n_samples);
+    }
+
+    if (argc>7) { // true amplitude given
+        if (argc < 9) {
+            fprintf (stderr, "If true amplitude is given, then both REAL and IM values are required\n");
+            print_usage();
+            return false;
+        }
+        true_a_R = atof(argv[7]);
+        true_a_I = atof(argv[8]);
+        fprintf (stdout, "True amplitude = %.5f + j %.5f\n", true_a_R, true_a_I);
+        true_amplitude_given = true;
     }
 
     return true;

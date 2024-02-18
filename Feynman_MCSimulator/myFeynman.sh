@@ -12,7 +12,7 @@ sbatch <<EOT
 #SBATCH --mem=10000
 #SBATCH --ntasks-per-node=$5
 
-./Feynman ../../circuits/$1/circuit_$1 $2 $3 $4 $5 $6
+./Feynman ../../circuits/$1/circuit_$1 $2 $3 $4 $5 $6 $7 $8
 
 mv Feynman_$1_$2_$3_$4_T$5_S$6.? ../../circuits/$1
 

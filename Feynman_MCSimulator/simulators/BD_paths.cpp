@@ -554,6 +554,7 @@ static bool BD_paths_NOVEC_kernel (TCircuit *c,
                 l_sumR += path_throughputR;
                 l_sumI += path_throughputI;
 #ifdef NON_ZERO_PATHS
+                fprintf (stderr, "\tw = %f + i %f \t prob = %f\n\n", wR, wI, prob);
                 l_non_zero_paths++;
 #endif
             }

@@ -5,6 +5,7 @@ from qiskit.circuit import Parameter
 from qiskit import quantum_info as qiskit_info
 
 from HSA import HSA_gen
+from RandomFilipa2023 import ran_gen
 
 import random
 from math import pi
@@ -538,8 +539,13 @@ def get_circuit(ID, *args):
         qc = HSA_gen (n, n_ccz, g, s, Toffoli= False, measure=False, remove_pairs_H=True)
         layers, num_layers = QCircuit_to_layers (qc)
         return qc, qc.num_qubits, layers, num_layers
-
-
+    elif ID == 500:
+        n = args[0]  # number of qubits
+        nCycles = args[1]    # layers of CZ
+        random.seed (10000)            
+        qc = ran_gen (n, nCycles, measure=False, remove_pairs_H=True)
+        layers, num_layers = QCircuit_to_layers (qc)
+        return qc, qc.num_qubits, layers, num_layers
         
 ###################
 #

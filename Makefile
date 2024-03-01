@@ -1,12 +1,12 @@
 CXX      := g++
-CXXFLAGS := -pthread
+CXXFLAGS := -pthread -O3
 LDFLAGS  := 
 BUILD    := ./build
 OBJ_DIR  := $(BUILD)/objects
 APP_DIR  := $(BUILD)/apps
 SHELL	 := /bin/bash
 TARGET   := Feynman
-INCLUDE  := -IFeynman_MCSimulator/simulators/ -IFeynman_MCSimulator/ -Icsv-parser/single_include/
+INCLUDE  := -IFeynman_MCSimulator/simulators/ -IFeynman_MCSimulator/ 
 SRC      :=                      \
    $(wildcard Feynman_MCSimulator/simulators/*.cpp) \
    $(wildcard Feynman_MCSimulator/*.cpp)         \

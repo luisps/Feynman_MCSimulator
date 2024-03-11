@@ -35,7 +35,8 @@ static char run_label[32];
 static unsigned long long init_state, final_state;
 static bool loop_init_states, loop_final_states;
 static int n_threads=1;
-static unsigned long long n_samples=1ull<<20;
+static int samples_exp2=20;
+static unsigned long long n_samples=1ull<<samples_exp2;
 static bool CSV_amplitude_verification = false;
 static bool true_amplitude_given = false;
 static float true_a_R, true_a_I;
@@ -344,9 +345,9 @@ static bool check_command_line(int argc, const char * argv[]) {
             }
             case 's':
             {
-                int exp2 = atoi(argv[i+1]);
-                n_samples = ((unsigned long long)(1ull << exp2));
-                fprintf (stdout, "Number of samples = %llu\n", n_samples);
+                samples_exp2 = atoi(argv[i+1]);
+                n_samples = ((unsigned long long)(1ull << samples_exp2));
+                fprintf (stdout, "Number of samples = 2^%d = %llu\n", samples_exp2, n_samples);
                 break;
             }
             case 'r':
@@ -382,123 +383,6 @@ static bool check_command_line(int argc, const char * argv[]) {
     return true;
 }
 
-
-static bool check_command_line2(int argc, const char * argv[]) {
-        
-    if (argc<2) {
-        fprintf (stderr, "Error; requires filename (without the .data extension)!");
-        print_usage();
-        return false;
-    }
-    {
-        strcpy(fileName, argv[1]);
-        strcat (fileName, ".data");
-        FILE *f = fopen(fileName, "rb");
-        if (f==NULL) {
-            fprintf (stderr, "Error; file %s does not exist!", fileName);
-            return false;
-        }
-        fclose (f);
-
-        // IS there a csv file with the pre computed amplitudes ?
-        strcpy(csv_amplitude_fileName, argv[1]);
-        strcat (csv_amplitude_fileName, ".csv");
-        f = fopen(csv_amplitude_fileName, "rb");
-        if (f==NULL) {
-            csv_amplitude_fileName[0] = '\0';   // no csv file
-            CSV_amplitude_verification = false;
-        }
-        else {
-            fprintf (stdout, "CSV file exists: will check accuracy\n");
-            fclose (f);
-            CSV_amplitude_verification = true;
-        }
-    }
-    
-    if (argc<3) {
-        fprintf (stderr, "Error; requires algorithm!");
-        print_usage();
-        return false;
-    }
-    switch (atoi(argv[2])) {
-        case 1:    // ALL_PATHS
-            algorithm = ALL_PATHS;
-            fprintf (stdout, "Algorithm :\tALL_PATHS\n");
-            break;
-        case 2:    // Importance Sampling FORWARD
-            algorithm = IS_FORWARD;
-            fprintf (stdout, "Algorithm :\tFORWARD IMPORTANCE SAMPLING\n");
-            break;
-        case 3:    // BiDirectional Sampling
-            algorithm = BD_SAMPLE;
-            fprintf (stdout, "Algorithm :\tBIDIRECTIONAL IMPORTANCE SAMPLING\n");
-            break;
-        case 4:    // BiDirectional Sampling MIS
-            algorithm = BD_MIS;
-            fprintf (stdout, "Algorithm :\tBIDIRECTIONAL IMPORTANCE SAMPLING WITH MIS\n");
-            break;
-        default:
-            fprintf (stderr, "Error; <algorithm> :\n\t\t1 - ALL_PATHS\n\t\t2 - FORWARD IMPORTANCE SAMPLING\n!");
-            print_usage();
-            return false;
-            break;
-    }
-    
-    if (argc<5) {
-        fprintf (stderr, "Error; requires initial and final states!");
-        print_usage();
-        return false;
-    }
-    if (argv[3][0]=='a')  { // loop over all init states
-        loop_init_states=true;
-    }
-    else {
-        loop_init_states=false;
-        init_state = strtoull(argv[3], NULL, 10);
-    }
-    if (argv[4][0]=='a')  { // loop over all final states
-        loop_final_states = true;
-    }
-    else {
-        loop_final_states = false;
-        final_state = strtoull(argv[4], NULL, 10);
-    }
-
-    if (argc>5) {
-        if (argv[5][0]=='a')  { // autonomously set the nbr of threads
-            n_threads=1;
-        }
-        else {
-            n_threads=atoi(argv[5]);
-        }
-    }
-    fprintf (stdout, "Number of threads = %d\n", n_threads);
-
-    if (argc>6) { // set the nbr of samples
-        int exp2 = atoi(argv[6]);
-        n_samples = ((unsigned long long)(1ull << exp2));
-        fprintf (stdout, "Number of samples = %llu\n", n_samples);
-    }
-    else if (algorithm!=ALL_PATHS) {
-        fprintf (stderr, "Number of samples not specified in command line. Defaulting to %llu\n", n_samples);
-    }
-
-    if (argc>7) { // true amplitude given
-        if (argc < 9) {
-            fprintf (stderr, "If true amplitude is given, then both REAL and IM values are required\n");
-            print_usage();
-            return false;
-        }
-        true_a_R = atof(argv[7]);
-        true_a_I = atof(argv[8]);
-        fprintf (stdout, "True amplitude = %.5f + j %.5f\n", true_a_R, true_a_I);
-        true_amplitude_given = true;
-    }
-
-    return true;
-}
-
-
 #ifdef CONVERGENCE_STATS
 static void save_stats (std::vector<T_Stats> stats, bool true_exists, float trueR, float trueI, TAlgorithms algorithm) {
     char csv_stats_fileName[1024], alg_str[16];
@@ -520,18 +404,18 @@ static void save_stats (std::vector<T_Stats> stats, bool true_exists, float true
             break;
     }
     if (strlen(run_label)>0) {  // run label exists
-        snprintf (csv_stats_fileName, 1024, "%s_stats_%s_%llu_%llu_%s.csv", fileName, alg_str, init_state, final_state, run_label);
+        snprintf (csv_stats_fileName, 1024, "%s_stats_%s_%llu_%llu_%d_%d_%s.csv", fileName, alg_str, init_state, final_state, samples_exp2, n_threads, run_label);
     } else {
-        snprintf (csv_stats_fileName, 1024, "%s_stats_%s_%llu_%llu.csv", fileName, alg_str, init_state, final_state);
+        snprintf (csv_stats_fileName, 1024, "%s_stats_%s_%llu_%llu_%d_%d.csv", fileName, alg_str, init_state, final_state, samples_exp2, n_threads);
     }
     
     f = fopen(csv_stats_fileName,"wt");
 
     if (true_exists) {
         fprintf (f, "trueR , trueI\n%f , %f\n", trueR, trueI);
-        fprintf (f, "n_samples , n_paths , estimateR , estimateI, varianceR, varianceI\n");
+        fprintf (f, "n_samples , time, n_paths , estimateR , estimateI, varianceR, varianceI\n");
     } else
-        fprintf (f, "n_samples , n_paths , estimateR , estimateI\n");
+        fprintf (f, "n_samples , time, n_paths , estimateR , estimateI\n");
 
     for (auto & stat : stats) {
         // compute running estimate
@@ -543,10 +427,10 @@ static void save_stats (std::vector<T_Stats> stats, bool true_exists, float true
             varI = (stat_estimateI-trueI)*(stat_estimateI-trueI);
             // keep in mind that variance is the sum of the real and complex variances
             // we are storing both terms separated here to allow for posterior processing
-            fprintf (f, "%llu , %llu , %f , %f, %f, %f\n", stat.n_samples, stat.n_Paths, stat_estimateR, stat_estimateI, varR, varI);
+            fprintf (f, "%llu , %lld , %llu , %f , %f, %f, %f\n", stat.n_samples, stat.time_us, stat.n_Paths, stat_estimateR, stat_estimateI, varR, varI);
         }
         else {
-            fprintf (f, "%llu , %llu , %f , %f\n", stat.n_samples, stat.n_Paths, stat_estimateR, stat_estimateI);
+            fprintf (f, "%llu , %lld , %llu , %f , %f\n", stat.n_samples, stat.time_us, stat.n_Paths, stat_estimateR, stat_estimateI);
         }
     }
     fclose (f);

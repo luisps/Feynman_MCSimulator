@@ -22,6 +22,44 @@ from math import pi
 # 8 - qbs=4, depth =4; [HHHH][HHHH][HHHH][HHHH] 4096/4096 paths !=0; but almost half self anhilate 
 # 9 - 
 
+### To remove pairs of successive Hadamards from a qiskit circuit
+
+def _get_gate_qubits (gate, qc):
+    g_qubits = []
+    for qb in gate[1]:
+        g_qubits.append(qc.find_bit(qb).index)
+    return g_qubits
+  
+def _remove_H_pairs (qc):
+    ndx_to_remove = []
+    n = qc.num_qubits;
+    # lists with H gate info per qubit
+    lastH = [False] * n
+    ndx_lastH = [0] * n
+    
+    # iterate over gates
+    for ndx, gate in enumerate(qc.data):
+        name = gate[0].name
+        g_qubits = _get_gate_qubits (gate, qc)
+        if name != 'h':  # not an Hadamard
+            for qb in g_qubits:
+                lastH[qb] = False
+        else:            # Hadamard
+            qb = g_qubits[0]    # single qubit gate
+            if not lastH[qb]:   # first Hadamard of a potential pair
+                lastH[qb] = True
+                ndx_lastH[qb] = ndx
+            else:               # second Hadamard in a pair
+                ndx_to_remove.append (ndx)
+                ndx_to_remove.append (ndx_lastH[qb])
+                lastH[qb] = False
+    
+    #print (ndx_to_remove)
+    for i in sorted(ndx_to_remove, reverse=True):
+        del qc.data[i]
+    return qc
+### END:: To remove pairs of successive Hadamards from a qiskit circuit
+
 # converts a QuantumCircuit to our internal layered representation
 def QCircuit_to_layers (qc):
     num_qubits = qc.num_qubits
@@ -503,6 +541,30 @@ def get_circuit(ID, *args):
         qc.h(0)
         qc.cp(pi/3, 0, 1)
         layers, num_layers = QCircuit_to_layers (qc)
+        return qc, qc.num_qubits, layers, num_layers
+    
+    elif ID==300:   # IQP inversion test (for kernel methods: computes the overlap as the probability of)
+        # generate n x n interactions matrix. The powers of each T gate are given by the diagonal elements of the interactions matrix. The powers of the CS gates are given by the upper triangle of the interactions matrix.
+        num_qubits = args[0]
+        random.seed (10000)
+        A = np.zeros((num_qubits,num_qubits), dtype=int)
+        for i in range(num_qubits):
+            for j in range (i, num_qubits):
+                A[i][j] = random.randint(1,10)
+                A[j][i] = A[i][j]
+        qcA = IQP(A)
+        B = np.zeros((num_qubits,num_qubits), dtype=int)
+        for i in range(num_qubits):
+            for j in range (i, num_qubits):
+                B[i][j] = random.randint(1,10)
+                B[j][i] = B[i][j]
+        qcB = IQP(B)
+        qcB_inv = qcA.inverse()
+        qc = qcB.compose(qcB_inv)
+        qc = qc.decompose ()
+        qc = _remove_H_pairs (qc)
+        layers, num_layers = QCircuit_to_layers (qc)
+        random.seed()
         return qc, qc.num_qubits, layers, num_layers
     elif ID == 400:   # HSA
         n = args[0]  # number of qubits

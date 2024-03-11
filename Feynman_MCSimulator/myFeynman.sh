@@ -1,6 +1,7 @@
 #!/bin/bash
-jobname="Feynman"
-filename="$jobname""_$1_$2_$3_$4_T$5_S$6"
+appname="Feynman"
+jobname="F""_$1_$2_S$6"
+filename="$appname""_$1_$2_$3_$4_T$5_S$6"
 RL_label=""
 if  [ $9 ]; then
 	filename+="_L$9"
@@ -12,8 +13,8 @@ fi
 sbatch <<EOT
 #!/bin/bash
 
-#SBATCH --job-name=Feynman
-#SBATCH --time=0:10:0
+#SBATCH --job-name=$jobname
+#SBATCH --time=1:40:0
 #SBATCH --partition=fct
 #SBATCH --qos=cpca095372023
 #SBATCH --output=$filename.o

@@ -35,75 +35,75 @@ static bool terminate = false;
 #ifdef NON_ZERO_PATHS
 static bool BD_paths_NOVEC_NOT (TCircuit *c,
                 unsigned long long init_state, unsigned long long final_state, const unsigned long long n_samples,
-                float &sumR, float &sumI, unsigned long long& n_Paths, const bool MIS, int& non_zero_paths);
+                myReal &sumR, myReal &sumI, unsigned long long& n_Paths, const bool MIS, int& non_zero_paths);
 static bool BD_paths_NOVEC_T (TCircuit *c,
-                unsigned long long init_state, unsigned long long final_state, unsigned long long& samples2proc, bool& taskReady, bool& resAvailable, float& T_sumR, float& T_sumI, unsigned long long& n_Paths, unsigned long long& processedSamples, const bool MIS, int& non_zero_paths);
+                unsigned long long init_state, unsigned long long final_state, unsigned long long& samples2proc, bool& taskReady, bool& resAvailable, myReal& T_sumR, myReal& T_sumI, unsigned long long& n_Paths, unsigned long long& processedSamples, const bool MIS, int& non_zero_paths);
 #else
 static bool BD_paths_NOVEC_NOT (TCircuit *c,
                 unsigned long long init_state, unsigned long long final_state, const unsigned long long n_samples,
-                float &sumR, float &sumI, unsigned long long& n_Paths, const bool MIS);
+                myReal &sumR, myReal &sumI, unsigned long long& n_Paths, const bool MIS);
 static bool BD_paths_NOVEC_T (TCircuit *c,
-                unsigned long long init_state, unsigned long long final_state, unsigned long long& samples2proc, bool& taskReady, bool& resAvailable, float& T_sumR, float& T_sumI, unsigned long long& n_Paths, unsigned long long& processedSamples, const bool MIS);
+                unsigned long long init_state, unsigned long long final_state, unsigned long long& samples2proc, bool& taskReady, bool& resAvailable, myReal& T_sumR, myReal& T_sumI, unsigned long long& n_Paths, unsigned long long& processedSamples, const bool MIS);
 #endif
 
 #ifdef NON_ZERO_PATHS
 static bool BD_paths_NOVEC_kernel (TCircuit *c,
                 unsigned long long init_state, unsigned long long final_state, const unsigned long long n_samples,
-                float &sumR, float &sumI,
+                myReal &sumR, myReal &sumI,
                 unsigned long long& n_Paths, const bool MIS,
-               std::default_random_engine& e, std::uniform_real_distribution<float>& d,
+               std::default_random_engine& e, std::uniform_real_distribution<myReal>& d,
                                    int& non_zero_paths);
 #else
     static bool BD_paths_NOVEC_kernel (TCircuit *c,
                 unsigned long long init_state, unsigned long long final_state, const unsigned long long n_samples,
-                float &sumR, float &sumI,
+                myReal &sumR, myReal &sumI,
                 unsigned long long& n_Paths, const bool MIS,
-                std::default_random_engine& e, std::uniform_real_distribution<float>& d);
+                std::default_random_engine& e, std::uniform_real_distribution<myReal>& d);
 #endif
 
 static void _ForwardPath (TCircuit *c, unsigned long long init_state,
                           std::vector<unsigned long long>& Fpath,
-                            std::vector<float>& Fpath_wR, std::vector<float>& Fpath_wI,
-                            std::vector<float>& Fpath_PwR, std::vector<float>& Fpath_PwI,
-                          std::vector<float>& Fpath_prob, std::vector<float>& Fpath_Pprob,
-                          std::default_random_engine& e, std::uniform_real_distribution<float>& d);
+                            std::vector<myReal>& Fpath_wR, std::vector<myReal>& Fpath_wI,
+                            std::vector<myReal>& Fpath_PwR, std::vector<myReal>& Fpath_PwI,
+                          std::vector<myReal>& Fpath_prob, std::vector<myReal>& Fpath_Pprob,
+                          std::default_random_engine& e, std::uniform_real_distribution<myReal>& d);
 
 static void _BackwardPath (TCircuit *c, unsigned long long final_state,
                               std::vector<unsigned long long>& Bpath,
-                                std::vector<float>& Bpath_wR, std::vector<float>& Bpath_wI,
-                                std::vector<float>& Bpath_PwR, std::vector<float>& Bpath_PwI,
-                              std::vector<float>& Bpath_prob, std::vector<float>& Bpath_Pprob,
-                           std::default_random_engine& e, std::uniform_real_distribution<float>& d);
+                                std::vector<myReal>& Bpath_wR, std::vector<myReal>& Bpath_wI,
+                                std::vector<myReal>& Bpath_PwR, std::vector<myReal>& Bpath_PwI,
+                              std::vector<myReal>& Bpath_prob, std::vector<myReal>& Bpath_Pprob,
+                           std::default_random_engine& e, std::uniform_real_distribution<myReal>& d);
 
-static float _ConnectPath (TCircuitLayer* layer, const int l,
+static myReal _ConnectPath (TCircuitLayer* layer, const int l,
                      unsigned long long currentState,
-                       float Fpath_PwR, float Fpath_PwI, float Fpath_Pprob,
+                       myReal Fpath_PwR, myReal Fpath_PwI, myReal Fpath_Pprob,
                        unsigned long long nextState,
-                       float Bpath_PwR, float Bpath_PwI, float Bpath_Pprob,
-                       float& wR, float& wI);
+                       myReal Bpath_PwR, myReal Bpath_PwI, myReal Bpath_Pprob,
+                       myReal& wR, myReal& wI);
 
-static float _ConnectPathMIS (TCircuitLayer* layer, const int l, const int num_layers,
+static myReal _ConnectPathMIS (TCircuitLayer* layer, const int l, const int num_layers,
                      std::vector<unsigned long long> Fpath,
-                       float Fpath_PwR, float Fpath_PwI, std::vector<float> Fpath_prob, std::vector<float> Fpath_Pprob,
+                       myReal Fpath_PwR, myReal Fpath_PwI, std::vector<myReal> Fpath_prob, std::vector<myReal> Fpath_Pprob,
                         std::vector<unsigned long long> Bpath,
-                       float Bpath_PwR, float Bpath_PwI, std::vector<float> Bpath_prob, std::vector<float> Bpath_Pprob,
-                       float& wR, float& wI);
+                       myReal Bpath_PwR, myReal Bpath_PwI, std::vector<myReal> Bpath_prob, std::vector<myReal> Bpath_Pprob,
+                       myReal& wR, myReal& wI);
 
 #ifdef CONVERGENCE_STATS
 bool BD_paths (TCircuit *c, unsigned long long init_state,
                 unsigned long long final_state, const unsigned long long n_samples,
-               float &estimateR, float &estimateI, std::vector<T_Stats>& stats, const int n_threads, const bool MIS) {
+               myReal &estimateR, myReal &estimateI, std::vector<T_Stats>& stats, const int n_threads, const bool MIS) {
 #else
 bool BD_paths (TCircuit *c, unsigned long long init_state,
                 unsigned long long final_state, const unsigned long long n_samples,
-                float &estimateR, float &estimateI, const int n_threads, const bool MIS) {
+                myReal &estimateR, myReal &estimateI, const int n_threads, const bool MIS) {
 #endif
 
     bool ret=true;
 #ifdef NON_ZERO_PATHS
     int non_zero_paths = 0;
 #endif
-    float sumR=0.f, sumI=0.f;
+    myReal sumR=0.f, sumI=0.f;
     unsigned long long n_ProcessedSamples = 0ull;
     unsigned long long n_Paths = 0ull;
 
@@ -114,8 +114,8 @@ bool BD_paths (TCircuit *c, unsigned long long init_state,
 #else
         ret = BD_paths_NOVEC_NOT (c, init_state, final_state, n_samples, sumR, sumI, n_Paths, MIS);
 #endif
-        estimateR = sumR / ((float)n_Paths);
-        estimateI = sumI / ((float)n_Paths);
+        estimateR = sumR / ((myReal)n_Paths);
+        estimateI = sumI / ((myReal)n_Paths);
         n_ProcessedSamples = n_samples;
     }
     else {
@@ -133,8 +133,8 @@ bool BD_paths (TCircuit *c, unsigned long long init_state,
         bool * taskReady = new bool [n_threads]; //false;
         bool * resAvailable = new bool [n_threads]; //false;
         // returned result from each thread
-        float * T_sumR = new float [n_threads]; // 0.f
-        float * T_sumI = new float [n_threads]; // 0.f
+        myReal * T_sumR = new myReal [n_threads]; // 0.f
+        myReal * T_sumI = new myReal [n_threads]; // 0.f
 
         unsigned long long * samples2proc = new unsigned long long [n_threads]; // = 0ull
         unsigned long long * processedSamples = new unsigned long long [n_threads]; // = 0ull
@@ -315,20 +315,20 @@ bool BD_paths (TCircuit *c, unsigned long long init_state,
 #ifdef NON_ZERO_PATHS
 static bool BD_paths_NOVEC_NOT (TCircuit *c,
                 unsigned long long init_state, unsigned long long final_state, const unsigned long long n_samples,
-                              float &sumR, float &sumI,
+                              myReal &sumR, myReal &sumI,
                                 unsigned long long& n_Paths, const bool MIS,
                                 int& non_zero_paths) {
 #else
     static bool BD_paths_NOVEC_NOT (TCircuit *c,
                     unsigned long long init_state, unsigned long long final_state, const unsigned long long n_samples,
-                                  float &sumR, float &sumI,
+                                  myReal &sumR, myReal &sumI,
                                     unsigned long long& n_Paths, const bool MIS) {
 #endif
     // thread local random number generator (seeded by a local random device)
     // see https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2013/n3551.pdf
     std::random_device rdev{};
     thread_local std::default_random_engine e{rdev()};
-    std::uniform_real_distribution<float>d{0.0,1.0};  // uniform distribution in[0,1[ (float)
+    std::uniform_real_distribution<myReal>d{0.0,1.0};  // uniform distribution in[0,1[ (myReal)
         
 #ifdef NON_ZERO_PATHS
     return BD_paths_NOVEC_kernel(c, init_state, final_state, n_samples, sumR, sumI, n_Paths, MIS, e, d, non_zero_paths);
@@ -340,12 +340,12 @@ static bool BD_paths_NOVEC_NOT (TCircuit *c,
 
 #ifdef NON_ZERO_PATHS
 static bool BD_paths_NOVEC_T (TCircuit *c,
-                unsigned long long init_state, unsigned long long final_state, unsigned long long& samples2proc, bool& taskReady, bool& resAvailable, float& T_sumR, float& T_sumI, unsigned long long& processedSamples,
+                unsigned long long init_state, unsigned long long final_state, unsigned long long& samples2proc, bool& taskReady, bool& resAvailable, myReal& T_sumR, myReal& T_sumI, unsigned long long& processedSamples,
                               unsigned long long& n_Paths, const bool MIS,
                               int& non_zero_paths) {
 #else
 static bool BD_paths_NOVEC_T (TCircuit *c,
-                unsigned long long init_state, unsigned long long final_state, unsigned long long& samples2proc, bool& taskReady, bool& resAvailable, float& T_sumR, float& T_sumI, unsigned long long& processedSamples,
+                unsigned long long init_state, unsigned long long final_state, unsigned long long& samples2proc, bool& taskReady, bool& resAvailable, myReal& T_sumR, myReal& T_sumI, unsigned long long& processedSamples,
                               unsigned long long& n_Paths, const bool MIS) {
 #endif
     
@@ -353,10 +353,10 @@ static bool BD_paths_NOVEC_T (TCircuit *c,
     // see https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2013/n3551.pdf
     std::random_device rdev{};
     thread_local std::default_random_engine e{rdev()};
-    std::uniform_real_distribution<float>d{0.0,1.0};  // uniform distribution in[0,1[ (float)
+    std::uniform_real_distribution<myReal>d{0.0,1.0};  // uniform distribution in[0,1[ (myReal)
         
     unsigned long long n_samples=0ull;
-    float sumR, sumI;
+    myReal sumR, sumI;
     unsigned long long Tn_Paths;
     bool T_terminate=false, isTask = false;
         
@@ -430,23 +430,23 @@ static bool BD_paths_NOVEC_T (TCircuit *c,
 #ifdef NON_ZERO_PATHS
 static bool BD_paths_NOVEC_kernel (TCircuit *c,
                 unsigned long long init_state, unsigned long long final_state, const unsigned long long n_samples,
-                float &sumR, float &sumI,
+                myReal &sumR, myReal &sumI,
                 unsigned long long& n_Paths, const bool MIS,
-                std::default_random_engine& e, std::uniform_real_distribution<float>& d,
+                std::default_random_engine& e, std::uniform_real_distribution<myReal>& d,
                                    int& non_zero_paths) {
 #else
 static bool BD_paths_NOVEC_kernel (TCircuit *c,
                                     unsigned long long init_state, unsigned long long final_state,
                                    const unsigned long long n_samples,
-                                    float &sumR, float &sumI,
+                                    myReal &sumR, myReal &sumI,
                                    unsigned long long& n_Paths, const bool MIS,
-                                   std::default_random_engine& e, std::uniform_real_distribution<float>& d) {
+                                   std::default_random_engine& e, std::uniform_real_distribution<myReal>& d) {
 #endif
     unsigned long long s;   // sample counter
     int l;                  // layer counter
     unsigned long long l_n_Paths = 0ull;   // nbr of paths (local counter)
 
-    float l_sumR=0.f, l_sumI=0.f;  // local summ accumulators for performance reasons
+    myReal l_sumR=0.f, l_sumI=0.f;  // local summ accumulators for performance reasons
 #ifdef NON_ZERO_PATHS
     int l_non_zero_paths = 0;      // local counter for performance reasons
 #endif
@@ -461,7 +461,7 @@ static bool BD_paths_NOVEC_kernel (TCircuit *c,
 #endif
         
         std::vector<unsigned long long> Fpath;
-        std::vector<float> Fpath_wR, Fpath_wI, Fpath_PwR, Fpath_PwI, Fpath_prob, Fpath_Pprob;
+        std::vector<myReal> Fpath_wR, Fpath_wI, Fpath_PwR, Fpath_PwI, Fpath_prob, Fpath_Pprob;
         _ForwardPath (c, init_state, Fpath, Fpath_wR, Fpath_wI, Fpath_PwR, Fpath_PwI, Fpath_prob, Fpath_Pprob, e, d);
         
 #ifdef DEBUG
@@ -486,7 +486,7 @@ static bool BD_paths_NOVEC_kernel (TCircuit *c,
         fprintf (stderr, "||\n");
 #endif
         std::vector<unsigned long long> Bpath;
-        std::vector<float> Bpath_wR, Bpath_wI, Bpath_PwR, Bpath_PwI, Bpath_prob, Bpath_Pprob;
+        std::vector<myReal> Bpath_wR, Bpath_wI, Bpath_PwR, Bpath_PwI, Bpath_prob, Bpath_Pprob;
         _BackwardPath (c, final_state, Bpath, Bpath_wR, Bpath_wI, Bpath_PwR, Bpath_PwI, Bpath_prob, Bpath_Pprob, e, d);
         
 #ifdef DEBUG
@@ -513,7 +513,7 @@ static bool BD_paths_NOVEC_kernel (TCircuit *c,
 #endif
         
         for (l=0 ; l < L ; l++ ) {  // generate all L different paths
-            float prob, wR, wI;
+            myReal prob, wR, wI;
             TCircuitLayer *layer = &c->layers[l];
             const unsigned long long currentState = Fpath[l];
             const unsigned long long nextState = Bpath[l+1];
@@ -549,8 +549,8 @@ static bool BD_paths_NOVEC_kernel (TCircuit *c,
             fprintf (stderr, "\tw = %.5f + i %.5f \t prob = %.5f\n\n", wR, wI, prob);
 #endif
             if ((complex_abs_square(wR, wI) > 0.f) && prob > 0.f) {  // non_zero_path
-                float path_throughputR = wR / prob;
-                float path_throughputI = wI / prob;
+                myReal path_throughputR = wR / prob;
+                myReal path_throughputI = wI / prob;
                 l_sumR += path_throughputR;
                 l_sumI += path_throughputI;
 #ifdef NON_ZERO_PATHS
@@ -574,10 +574,10 @@ static bool BD_paths_NOVEC_kernel (TCircuit *c,
     
 static void _ForwardPath (TCircuit *c, unsigned long long init_state,
                               std::vector<unsigned long long>& Fpath,
-                              std::vector<float>& Fpath_wR, std::vector<float>& Fpath_wI,
-                              std::vector<float>& Fpath_PwR, std::vector<float>& Fpath_PwI,
-                              std::vector<float>& Fpath_prob, std::vector<float>& Fpath_Pprob,
-                          std::default_random_engine& e, std::uniform_real_distribution<float>& d) {
+                              std::vector<myReal>& Fpath_wR, std::vector<myReal>& Fpath_wI,
+                              std::vector<myReal>& Fpath_PwR, std::vector<myReal>& Fpath_PwI,
+                              std::vector<myReal>& Fpath_prob, std::vector<myReal>& Fpath_Pprob,
+                          std::default_random_engine& e, std::uniform_real_distribution<myReal>& d) {
     
     
     unsigned long long current_state, next_state;
@@ -595,7 +595,7 @@ static void _ForwardPath (TCircuit *c, unsigned long long init_state,
     // Evolve through all gates' layes (starting at 0) , except the last one
     // The last layer will be later on deterministically connected to the final state
     for (int l=0 ; l<c->size->num_layers-1 ; l++) {
-        float l_wR, l_wI, l_prob, auxR, auxI;
+        myReal l_wR, l_wI, l_prob, auxR, auxI;
         
         TCircuitLayer *layer = &(c->layers[l]);
         
@@ -620,10 +620,10 @@ static void _ForwardPath (TCircuit *c, unsigned long long init_state,
     
 static void _BackwardPath (TCircuit *c, unsigned long long final_state,
                               std::vector<unsigned long long>& Bpath,
-                                std::vector<float>& Bpath_wR, std::vector<float>& Bpath_wI,
-                                std::vector<float>& Bpath_PwR, std::vector<float>& Bpath_PwI,
-                              std::vector<float>& Bpath_prob, std::vector<float>& Bpath_Pprob,
-                           std::default_random_engine& e, std::uniform_real_distribution<float>& d) {
+                                std::vector<myReal>& Bpath_wR, std::vector<myReal>& Bpath_wI,
+                                std::vector<myReal>& Bpath_PwR, std::vector<myReal>& Bpath_PwI,
+                              std::vector<myReal>& Bpath_prob, std::vector<myReal>& Bpath_Pprob,
+                           std::default_random_engine& e, std::uniform_real_distribution<myReal>& d) {
     
     
     unsigned long long current_state, next_state;
@@ -641,7 +641,7 @@ static void _BackwardPath (TCircuit *c, unsigned long long final_state,
     // Evolve through all gates' layes (starting at the last one (num_lkayers-1)) , except the first one
     // The first layer will be later on deterministically connected to the initial state
     for (int l=c->size->num_layers-1 ; l>0 ; l--) {
-        float l_wR, l_wI, l_prob, auxR, auxI;
+        myReal l_wR, l_wI, l_prob, auxR, auxI;
         
         TCircuitLayer *layer = &(c->layers[l]);
         
@@ -684,13 +684,13 @@ static void _BackwardPath (TCircuit *c, unsigned long long final_state,
     return;
 }
     
-static float _ConnectPathMIS (TCircuitLayer* layer, const int l, const int num_layers,
+static myReal _ConnectPathMIS (TCircuitLayer* layer, const int l, const int num_layers,
                          std::vector<unsigned long long> Fpath,
-                           float Fpath_PwR, float Fpath_PwI, std::vector<float> Fpath_prob, std::vector<float> Fpath_Pprob,
+                           myReal Fpath_PwR, myReal Fpath_PwI, std::vector<myReal> Fpath_prob, std::vector<myReal> Fpath_Pprob,
                             std::vector<unsigned long long> Bpath,
-                           float Bpath_PwR, float Bpath_PwI, std::vector<float> Bpath_prob, std::vector<float> Bpath_Pprob,
-                                  float& wR, float& wI) {
-    float lwR, lwI, prob;
+                           myReal Bpath_PwR, myReal Bpath_PwI, std::vector<myReal> Bpath_prob, std::vector<myReal> Bpath_Pprob,
+                                  myReal& wR, myReal& wI) {
+    myReal lwR, lwI, prob;
     unsigned long long currentState, nextState;
     
     currentState = Fpath[l];
@@ -723,7 +723,7 @@ static float _ConnectPathMIS (TCircuitLayer* layer, const int l, const int num_l
  
     // store probablities in a vector
     // compute product of all probabilities (to be used only after excluding (dividing) one per iteration)
-    std::vector<float> path_probs;
+    std::vector<myReal> path_probs;
     for (int ll=0 ; ll < l+1  ; ll++ ) {  // forward
         path_probs.push_back(Fpath_prob[ll]);
     }
@@ -740,9 +740,9 @@ static float _ConnectPathMIS (TCircuitLayer* layer, const int l, const int num_l
 
     // compute MIS_weight as the sum of
     // the probabilities of the num_layers alternative deterministic connections
-    float MIS_weight_reciprocal = 0.f;
+    myReal MIS_weight_reciprocal = 0.f;
     for (int det_connect=0 ; det_connect < num_layers ; det_connect++) {
-        float prob_prod=1.f ;
+        myReal prob_prod=1.f ;
         // compute probability with deterministic transition across layer det_connect
         for (int ll=0 ; ll <= num_layers+1 ; ll++) {
             prob_prod *= ((det_connect+1) == ll ? 1.f : path_probs[ll]);
@@ -770,14 +770,14 @@ static float _ConnectPathMIS (TCircuitLayer* layer, const int l, const int num_l
 
 }
 
-static float _ConnectPath (TCircuitLayer* layer, const int l,
+static myReal _ConnectPath (TCircuitLayer* layer, const int l,
                        unsigned long long currentState,
-                         float Fpath_PwR, float Fpath_PwI, float Fpath_Pprob,
+                         myReal Fpath_PwR, myReal Fpath_PwI, myReal Fpath_Pprob,
                          unsigned long long nextState,
-                         float Bpath_PwR, float Bpath_PwI, float Bpath_Pprob,
-                       float& wR, float& wI) {
+                         myReal Bpath_PwR, myReal Bpath_PwI, myReal Bpath_Pprob,
+                       myReal& wR, myReal& wI) {
     
-    float lwR, lwI, prob;
+    myReal lwR, lwI, prob;
     layer_w(layer, l, currentState, nextState, lwR, lwI);
 #ifdef DEBUG
     fprintf (stderr, "\nCONNECT\n");

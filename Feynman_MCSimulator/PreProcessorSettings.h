@@ -8,6 +8,7 @@
 #ifndef PreProcessorSettings_h
 #define PreProcessorSettings_h
 
+#include "myReal.h"
 /*
  * define the pre processor variable below to compile
  * runtime printfs related to debugging MC process
@@ -38,7 +39,7 @@
 typedef struct path_desc {
     unsigned long long path_ndx;
     std::vector<unsigned long long> path;
-    float Ar, Ai;
+    myReal Ar, Ai;
 } T_Non_zero_path;
 #endif
 
@@ -55,7 +56,7 @@ typedef struct path_desc {
 typedef struct T_Stats_s {
     unsigned long long n_samples;
     unsigned long long n_Paths;
-    float sumR, sumI;
+    myReal sumR, sumI;
     long long time_us;
 } T_Stats;
 #endif

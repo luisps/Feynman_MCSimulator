@@ -10,9 +10,10 @@
 
 #include <stdio.h>
 #include "circuit.h"
+#include "myReal.h"
 
 bool all_paths (TCircuit *, unsigned long long init_state,
                 unsigned long long final_state,
-                float &estimateR, float &estimateI, const int n_threads=1);
+                myReal &estimateR, myReal &estimateI, const int n_threads=1);
 
 #endif /* all_paths_hpp */

@@ -23,6 +23,7 @@ using namespace std::chrono;
 #include "BD_paths.hpp"
 #include "complex.h"
 #include "csv.hpp"   // from https://github.com/vincentlaucsb/csv-parser
+#include "myReal.h"
 
 #include "PreProcessorSettings.h"
 
@@ -39,7 +40,7 @@ static int samples_exp2=20;
 static unsigned long long n_samples=1ull<<samples_exp2;
 static bool CSV_amplitude_verification = false;
 static bool true_amplitude_given = false;
-static float true_a_R, true_a_I;
+static myReal true_a_R, true_a_I;
 
 enum TAlgorithms {
     ALL_PATHS=1,
@@ -49,7 +50,7 @@ enum TAlgorithms {
 } ;
 
 #ifdef CONVERGENCE_STATS
-static void save_stats (std::vector<T_Stats>, bool, float, float, TAlgorithms );
+static void save_stats (std::vector<T_Stats>, bool, myReal, myReal, TAlgorithms );
 #endif
 
 static TAlgorithms algorithm;
@@ -112,7 +113,7 @@ int main(int argc, const char * argv[]) {
         for (final_state = final_state_range_start ; final_state < final_state_range_end ; final_state++) {
             
             bool ret;
-            float estimateR, estimateI;
+            myReal estimateR, estimateI;
             bool CSV_found = false;
 
             // https://www.geeksforgeeks.org/measure-execution-time-function-cpp/
@@ -168,9 +169,9 @@ int main(int argc, const char * argv[]) {
             if (duration.count() <= 1000)
                 fprintf (stdout, "T = %lld us\n", duration.count());
             else if (duration.count() <= 1e6)
-                fprintf (stdout, "T = %.1f ms\n", ((float)duration.count())/1000.f);
+                fprintf (stdout, "T = %.1f ms\n", ((myReal)duration.count())/1000.f);
             else
-                fprintf (stdout, "T = %.1f s\n", ((float)duration.count())/1000000.f);
+                fprintf (stdout, "T = %.1f s\n", ((myReal)duration.count())/1000000.f);
 
             if (CSV_amplitude_verification || true_amplitude_given)  {  // compare estimate with true velue from CSV
                 
@@ -183,16 +184,16 @@ int main(int argc, const char * argv[]) {
                         // Note: Can also use index of column with [] operator
                         CSV_X = row["psi0"].get<unsigned long long>();
                         if (CSV_X==init_state) {
-                            true_a_R = row[to_string(final_state)+"r"].get<float>();
-                            true_a_I = row[to_string(final_state)+"i"].get<float>();
+                            true_a_R = row[to_string(final_state)+"r"].get<myReal>();
+                            true_a_I = row[to_string(final_state)+"i"].get<myReal>();
                             CSV_found = true;
                             break;
                         }
                     }
                     if (CSV_found) {
                         fprintf (stdout,"< %llu | U | %llu > = %f + i %f TRUE AMPLITUDE L2 error=%f\n", final_state, init_state, true_a_R, true_a_I, complex_abs(estimateR-true_a_R, estimateI-true_a_I));
-                        const float varR = (estimateR-true_a_R)*(estimateR-true_a_R);
-                        const float varI = (estimateI-true_a_I)*(estimateI-true_a_I);
+                        const myReal varR = (estimateR-true_a_R)*(estimateR-true_a_R);
+                        const myReal varI = (estimateI-true_a_I)*(estimateI-true_a_I);
                         fprintf (stdout,"Estimate variance = %e\n\n", varR+varI);
                     } else {
                         fprintf (stdout,"< %llu | U | %llu > TRUE AMPLITUDE not found in CSV\n\n", final_state, init_state);
@@ -200,8 +201,8 @@ int main(int argc, const char * argv[]) {
                 }
                 else {  // true amplitude given in the command line
                     fprintf (stdout,"< %llu | U | %llu > = %f + i %f TRUE AMPLITUDE L2 error=%f\n", final_state, init_state, true_a_R, true_a_I, complex_abs(estimateR-true_a_R, estimateI-true_a_I));
-                    const float varR = (estimateR-true_a_R)*(estimateR-true_a_R);
-                    const float varI = (estimateI-true_a_I)*(estimateI-true_a_I);
+                    const myReal varR = (estimateR-true_a_R)*(estimateR-true_a_R);
+                    const myReal varI = (estimateI-true_a_I)*(estimateI-true_a_I);
                     fprintf (stdout,"Estimate variance = %e\n\n", varR+varI);
 
                 }
@@ -384,10 +385,10 @@ static bool check_command_line(int argc, const char * argv[]) {
 }
 
 #ifdef CONVERGENCE_STATS
-static void save_stats (std::vector<T_Stats> stats, bool true_exists, float trueR, float trueI, TAlgorithms algorithm) {
+static void save_stats (std::vector<T_Stats> stats, bool true_exists, myReal trueR, myReal trueI, TAlgorithms algorithm) {
     char csv_stats_fileName[1024], alg_str[16];
     FILE *f;
-    float stat_estimateR, stat_estimateI, varR, varI;
+    myReal stat_estimateR, stat_estimateI, varR, varI;
     
     switch (algorithm) {
         case IS_FORWARD:
@@ -419,8 +420,8 @@ static void save_stats (std::vector<T_Stats> stats, bool true_exists, float true
 
     for (auto & stat : stats) {
         // compute running estimate
-        stat_estimateR = stat.sumR / ((float)stat.n_Paths);
-        stat_estimateI = stat.sumI / ((float)stat.n_Paths);
+        stat_estimateR = stat.sumR / ((myReal)stat.n_Paths);
+        stat_estimateI = stat.sumI / ((myReal)stat.n_Paths);
         
         if (true_exists) {
             varR = (stat_estimateR-trueR)*(stat_estimateR-trueR);

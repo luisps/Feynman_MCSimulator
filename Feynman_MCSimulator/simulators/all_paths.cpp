@@ -24,17 +24,17 @@ using namespace std;
 static bool all_paths_NOVEC_T (TCircuit *c,
                 unsigned long long init_state, unsigned long long final_state,
                 const unsigned long long l0_init, const unsigned long long l0_finish,
-                float &estimateR, float &estimateI, int& non_zero_paths);
+                myReal &estimateR, myReal &estimateI, int& non_zero_paths);
 #else
 static bool all_paths_NOVEC_T (TCircuit *c,
                 unsigned long long init_state, unsigned long long final_state,
                 const unsigned long long l0_init, const unsigned long long l0_finish,
-                float &estimateR, float &estimateI);
+                myReal &estimateR, myReal &estimateI);
 #endif
 
 bool all_paths (TCircuit *c, unsigned long long init_state,
                 unsigned long long final_state,
-                float &estimateR, float &estimateI, const int n_threads) {
+                myReal &estimateR, myReal &estimateI, const int n_threads) {
     
     bool ret=true;
 #ifdef NON_ZERO_PATHS
@@ -70,8 +70,8 @@ bool all_paths (TCircuit *c, unsigned long long init_state,
         else
         {
             std::vector<std::thread> threads;
-            float * l_estimateR = new float[n_threads];
-            float * l_estimateI = new float [n_threads];
+            myReal * l_estimateR = new myReal[n_threads];
+            myReal * l_estimateI = new myReal [n_threads];
 #ifdef NON_ZERO_PATHS
             int * l_NzeroP = new int [n_threads];
 #endif
@@ -120,17 +120,17 @@ bool all_paths (TCircuit *c, unsigned long long init_state,
 static bool all_paths_NOVEC_T (TCircuit *c,
                 unsigned long long init_state, unsigned long long final_state,
                 const unsigned long long l0_init, const unsigned long long l0_finish,
-                float &estimateR, float &estimateI, int& non_zero_paths) {
+                myReal &estimateR, myReal &estimateI, int& non_zero_paths) {
 #else
     static bool all_paths_NOVEC_T (TCircuit *c,
                     unsigned long long init_state, unsigned long long final_state,
                     const unsigned long long l0_init, const unsigned long long l0_finish,
-                    float &estimateR, float &estimateI) {
+                    myReal &estimateR, myReal &estimateI) {
 #endif
 #ifdef NON_ZERO_PATHS
     non_zero_paths = 0;
 #endif
-    float sumR=0., sumI=0.;
+    myReal sumR=0., sumI=0.;
     const int L = c->size->num_layers;  // number of gate layers
     /* the number of intermediate states layers is L-1.
        This is the number of 'for' loops we have to realize
@@ -149,8 +149,8 @@ static bool all_paths_NOVEC_T (TCircuit *c,
     unsigned long long *ndxs = new unsigned long long [L-2];
 
     // store the intermediate amplitudes associated with each transition between layers
-    float *w_intermediateR = new float [L-2];
-    float *w_intermediateI = new float [L-2];
+    myReal *w_intermediateR = new myReal [L-2];
+    myReal *w_intermediateI = new myReal [L-2];
 
     // compute NBR_STATES : the number of states to iterate in each intermediate state layer
     const unsigned long long NBR_STATES = 1 << c->size->num_qubits;
@@ -174,7 +174,7 @@ static bool all_paths_NOVEC_T (TCircuit *c,
         
         // Handle layer 0 explicitly to allow for ealy termination ('break')
         {
-            float wR, wI;
+            myReal wR, wI;
             
             // get gate layer l
             TCircuitLayer *layer = &c->layers[0];
@@ -200,7 +200,7 @@ static bool all_paths_NOVEC_T (TCircuit *c,
         }  // end layer 0
         
         for (int l=1 ; l < (L-2) ; l++) {
-            float wR, wI;
+            myReal wR, wI;
             
             // get gate layer l
             TCircuitLayer *layer = &c->layers[l];
@@ -227,7 +227,7 @@ static bool all_paths_NOVEC_T (TCircuit *c,
         
         bool stop = false;
         while (!stop) {
-            float acc_wR, acc_wI;
+            myReal acc_wR, acc_wI;
             acc_wR = w_intermediateR[0]; acc_wI=w_intermediateI[0];
             
 #ifdef DEBUG
@@ -257,8 +257,8 @@ static bool all_paths_NOVEC_T (TCircuit *c,
                 
                 current_state = (L >= 4 ? ndxs[L-3] : ndxs[0]);
                 for (unsigned long long next_state=0ull; next_state<NBR_STATES ; next_state++) {
-                    float path_wR, path_wI;
-                    float wRl, wIl, wRll, wIll;
+                    myReal path_wR, path_wI;
+                    myReal wRl, wIl, wRll, wIll;
                     
                     layer_w(layer_2L, l, current_state, next_state, wRl, wIl);
 #ifdef DEBUG
@@ -346,7 +346,7 @@ static bool all_paths_NOVEC_T (TCircuit *c,
                     else break_for_loop = true;
                     
                     if (ndxs[l]!=0) { // do not do the |0> . It has been done above
-                        float wR=1.0f, wI=0.0f;
+                        myReal wR=1.0f, wI=0.0f;
                         TCircuitLayer *layer;
                         // Recompute amplitude through the NEXT gate layer  [l+1]
                         // current_state is ndxs[l]

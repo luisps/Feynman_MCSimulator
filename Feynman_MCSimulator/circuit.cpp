@@ -7,6 +7,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <memory.h>
 
 #include "circuit.h"
 #include "complex.h"
@@ -105,10 +106,19 @@ TCircuit * read_circuit (const char *fileName) {
             TGate1P1 * g1p1_ptr = (TGate1P1 *) layer->gates[1];
             for (int g=0 ; g<layer->num_type_gates[1] ; g++) {
                 // read next G1P1 gate: only part of the data is on file
-                fread_ret = (int) fread((void *)&g1p1_ptr->fdata, sizeof(TGate1P1_FDATA), 1, f);
+                TGate1P1_FDATA aux;
+                fread_ret = (int) fread((void *)&aux, sizeof(TGate1P1_FDATA), 1, f);
                 if ( fread_ret != 1) {
                     fprintf (stderr, "read_circuit() could not read layer %d gate G1P1 nbr %d\n", l, g);
                     return NULL;
+                }
+                g1p1_ptr->fdata.name = aux.name;
+                g1p1_ptr->fdata.qubit = aux.qubit;
+                g1p1_ptr->fdata.param = (myReal) aux.param;
+                myReal *MR_aux_ptr = (myReal *)g1p1_ptr->fdata.m;
+                float *aux_ptr = (float *)aux.m;
+                for (int x=0 ; x<8 ; x++, MR_aux_ptr++, aux_ptr++) {
+                    *MR_aux_ptr = (myReal) *aux_ptr;
                 }
                 // compute the pdf data
                 for (int r=0 ; r<2 ; r++) {
@@ -154,20 +164,32 @@ TCircuit * read_circuit (const char *fileName) {
         TGate2P1 * g2p1_ptr = (TGate2P1 *) layer->gates[3];
             for (int g=0 ; g<layer->num_type_gates[3] ; g++) {
                 // read next G2P1 gate: only part of the data is on file
-                fread_ret = (int) fread((void *)&g2p1_ptr->fdata, sizeof(TGate2P1_FDATA), 1, f);
+                TGate2P1_FDATA aux;
+                fread_ret = (int) fread((void *)&aux, sizeof(TGate2P1_FDATA), 1, f);
                 if ( fread_ret != 1) {
                     fprintf (stderr, "read_circuit() could not read layer %d gate G2P1 nbr %d\n", l, g);
                     return NULL;
                 }
+                
+                g2p1_ptr->fdata.name = aux.name;
+                g2p1_ptr->fdata.c_qubit = aux.c_qubit;
+                g2p1_ptr->fdata.t_qubit = aux.t_qubit;
+                g2p1_ptr->fdata.param = (myReal) aux.param;
+                myReal *MR_aux_ptr = (myReal *)g2p1_ptr->fdata.m;
+                float *aux_ptr = (float *)aux.m;
+                for (int x=0 ; x<32 ; x++, MR_aux_ptr++, aux_ptr++) {
+                    *MR_aux_ptr = (myReal) *aux_ptr;
+                }
+
                 //fprintf(stderr, "Read in gate name %d and qubit %d\n", g1p0_ptr->name, g1p0_ptr->qubit);
                 // compute the pdf and cdf data
                 // NOTE: the cdf is transposed such that sampling an output for a given input uses a single row
                 //       transposition occurs HERE in read_circuit()
 
-                float acdf[4] = {0.f, 0.f, 0.f, 0.f};
+                myReal acdf[4] = {0.f, 0.f, 0.f, 0.f};
                 for (int r=0 ; r<4 ; r++) {
                     for (int c=0 ; c<4 ; c++) {
-                        const float abs_sq = complex_abs_square(g2p1_ptr->fdata.m[r][c][0],g2p1_ptr->fdata.m[r][c][1]);
+                        const myReal abs_sq = complex_abs_square(g2p1_ptr->fdata.m[r][c][0],g2p1_ptr->fdata.m[r][c][1]);
                         g2p1_ptr->pdf[r][c] = abs_sq;
                         acdf[c] += abs_sq;
                         // TRANSPOSITION

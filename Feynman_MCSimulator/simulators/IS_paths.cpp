@@ -52,45 +52,45 @@ static bool terminate = false;
 #ifdef NON_ZERO_PATHS
 static bool IS_paths_NOVEC_NOT (TCircuit *c,
                 unsigned long long init_state, unsigned long long final_state, const unsigned long long n_samples,
-                float &sumR, float &sumI, int& non_zero_paths);
+                myReal &sumR, myReal &sumI, int& non_zero_paths);
 static bool IS_paths_NOVEC_T (TCircuit *c,
-                unsigned long long init_state, unsigned long long final_state, unsigned long long& samples2proc, bool& taskReady, bool& resAvailable, float& T_sumR, float& T_sumI, unsigned long long& processedSamples, int& non_zero_paths);
+                unsigned long long init_state, unsigned long long final_state, unsigned long long& samples2proc, bool& taskReady, bool& resAvailable, myReal& T_sumR, myReal& T_sumI, unsigned long long& processedSamples, int& non_zero_paths);
 #else
 static bool IS_paths_NOVEC_NOT (TCircuit *c,
                 unsigned long long init_state, unsigned long long final_state, const unsigned long long n_samples,
-                float &sumR, float &sumI);
+                myReal &sumR, myReal &sumI);
 static bool IS_paths_NOVEC_T (TCircuit *c,
-                unsigned long long init_state, unsigned long long final_state, unsigned long long& samples2proc, bool& taskReady, bool& resAvailable, float& T_sumR, float& T_sumI, unsigned long long& processedSamples);
+                unsigned long long init_state, unsigned long long final_state, unsigned long long& samples2proc, bool& taskReady, bool& resAvailable, myReal& T_sumR, myReal& T_sumI, unsigned long long& processedSamples);
 #endif
 
 #ifdef NON_ZERO_PATHS
 static bool IS_paths_NOVEC_kernel (TCircuit *c,
                 unsigned long long init_state, unsigned long long final_state, const unsigned long long n_samples,
-                float &sumR, float &sumI,
-                std::default_random_engine& e, std::uniform_real_distribution<float>& d,
+                myReal &sumR, myReal &sumI,
+                std::default_random_engine& e, std::uniform_real_distribution<myReal>& d,
                                    int& non_zero_paths);
 #else
     static bool IS_paths_NOVEC_kernel (TCircuit *c,
                 unsigned long long init_state, unsigned long long final_state, const unsigned long long n_samples,
-                float &sumR, float &sumI,
-                                       std::default_random_engine& e, std::uniform_real_distribution<float>& d);
+                myReal &sumR, myReal &sumI,
+                                       std::default_random_engine& e, std::uniform_real_distribution<myReal>& d);
 #endif
 
 #ifdef CONVERGENCE_STATS
 bool IS_paths (TCircuit *c, unsigned long long init_state,
                 unsigned long long final_state, const unsigned long long n_samples,
-               float &estimateR, float &estimateI, std::vector<T_Stats>& stats, const int n_threads) {
+               myReal &estimateR, myReal &estimateI, std::vector<T_Stats>& stats, const int n_threads) {
 #else
 bool IS_paths (TCircuit *c, unsigned long long init_state,
                 unsigned long long final_state, const unsigned long long n_samples,
-                float &estimateR, float &estimateI, const int n_threads) {
+                myReal &estimateR, myReal &estimateI, const int n_threads) {
 #endif
 
     bool ret=true;
 #ifdef NON_ZERO_PATHS
     int non_zero_paths = 0;
 #endif
-    float sumR=0.f, sumI=0.f;
+    myReal sumR=0.f, sumI=0.f;
     unsigned long long n_ProcessedSamples = 0ull;
 
     
@@ -100,8 +100,8 @@ bool IS_paths (TCircuit *c, unsigned long long init_state,
 #else
         ret = IS_paths_NOVEC_NOT (c, init_state, final_state, n_samples, sumR, sumI);
 #endif
-        estimateR = sumR / ((float)n_samples);
-        estimateI = sumI / ((float)n_samples);
+        estimateR = sumR / ((myReal)n_samples);
+        estimateI = sumI / ((myReal)n_samples);
         n_ProcessedSamples = n_samples;
     }
     else {
@@ -119,8 +119,8 @@ bool IS_paths (TCircuit *c, unsigned long long init_state,
         bool * taskReady = new bool [n_threads]; //false;
         bool * resAvailable = new bool [n_threads]; //false;
         // returned result from each thread
-        float * T_sumR = new float [n_threads]; // 0.f
-        float * T_sumI = new float [n_threads]; // 0.f
+        myReal * T_sumR = new myReal [n_threads]; // 0.f
+        myReal * T_sumI = new myReal [n_threads]; // 0.f
 
         unsigned long long * samples2proc = new unsigned long long [n_threads]; // = 0ull
         unsigned long long * processedSamples = new unsigned long long [n_threads]; // = 0ull
@@ -296,17 +296,17 @@ bool IS_paths (TCircuit *c, unsigned long long init_state,
 #ifdef NON_ZERO_PATHS
 static bool IS_paths_NOVEC_NOT (TCircuit *c,
                 unsigned long long init_state, unsigned long long final_state, const unsigned long long n_samples,
-                              float &sumR, float &sumI, int& non_zero_paths) {
+                              myReal &sumR, myReal &sumI, int& non_zero_paths) {
 #else
     static bool IS_paths_NOVEC_NOT (TCircuit *c,
                     unsigned long long init_state, unsigned long long final_state, const unsigned long long n_samples,
-                                  float &sumR, float &sumI) {
+                                  myReal &sumR, myReal &sumI) {
 #endif
     // thread local random number generator (seeded by a local random device)
     // see https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2013/n3551.pdf
     std::random_device rdev{};
     thread_local std::default_random_engine e{rdev()};
-    std::uniform_real_distribution<float>d{0.0,1.0};  // uniform distribution in[0,1[ (float)
+    std::uniform_real_distribution<myReal>d{0.0,1.0};  // uniform distribution in[0,1[ (myReal)
         
 #ifdef NON_ZERO_PATHS
     return IS_paths_NOVEC_kernel(c, init_state, final_state, n_samples, sumR, sumI, e, d, non_zero_paths);
@@ -319,20 +319,20 @@ static bool IS_paths_NOVEC_NOT (TCircuit *c,
     
 #ifdef NON_ZERO_PATHS
 static bool IS_paths_NOVEC_T (TCircuit *c,
-                unsigned long long init_state, unsigned long long final_state, unsigned long long& samples2proc, bool& taskReady, bool& resAvailable, float& T_sumR, float& T_sumI, unsigned long long& processedSamples, int& non_zero_paths) {
+                unsigned long long init_state, unsigned long long final_state, unsigned long long& samples2proc, bool& taskReady, bool& resAvailable, myReal& T_sumR, myReal& T_sumI, unsigned long long& processedSamples, int& non_zero_paths) {
 #else
 static bool IS_paths_NOVEC_T (TCircuit *c,
-                unsigned long long init_state, unsigned long long final_state, unsigned long long& samples2proc, bool& taskReady, bool& resAvailable, float& T_sumR, float& T_sumI, unsigned long long& processedSamples) {
+                unsigned long long init_state, unsigned long long final_state, unsigned long long& samples2proc, bool& taskReady, bool& resAvailable, myReal& T_sumR, myReal& T_sumI, unsigned long long& processedSamples) {
 #endif
     
     // thread local random number generator (seeded by a local random device)
     // see https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2013/n3551.pdf
     std::random_device rdev{};
     thread_local std::default_random_engine e{rdev()};
-    std::uniform_real_distribution<float>d{0.0,1.0};  // uniform distribution in[0,1[ (float)
+    std::uniform_real_distribution<myReal>d{0.0,1.0};  // uniform distribution in[0,1[ (myReal)
         
     unsigned long long n_samples=0ull;
-    float sumR, sumI;
+    myReal sumR, sumI;
     bool T_terminate=false, isTask = false;
         
     // wait for tasks or terminate on cv_m2s
@@ -404,20 +404,20 @@ static bool IS_paths_NOVEC_T (TCircuit *c,
 #ifdef NON_ZERO_PATHS
 static bool IS_paths_NOVEC_kernel (TCircuit *c,
                 unsigned long long init_state, unsigned long long final_state, const unsigned long long n_samples,
-                float &sumR, float &sumI,
-                std::default_random_engine& e, std::uniform_real_distribution<float>& d,
+                myReal &sumR, myReal &sumI,
+                std::default_random_engine& e, std::uniform_real_distribution<myReal>& d,
                 int& non_zero_paths) {
 #else
     static bool IS_paths_NOVEC_kernel (TCircuit *c,
                 unsigned long long init_state, unsigned long long final_state, const unsigned long long n_samples,
-                float &sumR, float &sumI,
-                std::default_random_engine& e, std::uniform_real_distribution<float>& d) {
+                myReal &sumR, myReal &sumI,
+                std::default_random_engine& e, std::uniform_real_distribution<myReal>& d) {
 #endif
     
     unsigned long long s;   // sample counter
     int l;                  // layer counter
     
-    float l_sumR=0.f, l_sumI=0.f;  // local summ accumulators for performance reasons
+    myReal l_sumR=0.f, l_sumI=0.f;  // local summ accumulators for performance reasons
 #ifdef NON_ZERO_PATHS
     int l_non_zero_paths = 0;      // local counter for performance reasons
 #endif
@@ -426,8 +426,8 @@ static bool IS_paths_NOVEC_kernel (TCircuit *c,
         
     // iteratively generate samples
     for (s=0ull; s<n_samples ; s++) {
-        float path_pdf= 1.f;
-        float path_wR=1.f, path_wI = 0.f;
+        myReal path_pdf= 1.f;
+        myReal path_wR=1.f, path_wI = 0.f;
         bool zero_power_transition = false;
         
         unsigned long long next_state=0ull, current_state = init_state;  // state before the next layer
@@ -440,7 +440,7 @@ static bool IS_paths_NOVEC_kernel (TCircuit *c,
         // the last layer (l=L-1) is handled outside the 'for' loop since it is deterministically
         // connected to 'final_state'
         for (l=0 ; l< L-1 && !zero_power_transition ; l++) {
-            float wR, wI, pdf;
+            myReal wR, wI, pdf;
             
 #ifdef DEBUG
                 fprintf(stderr, "\tLayer: %d out of %d\n", l, L);
@@ -485,7 +485,7 @@ static bool IS_paths_NOVEC_kernel (TCircuit *c,
         
         // final layer (L-1)
         if (!zero_power_transition) { // path still contributes (I believer it always will)
-            float wR, wI;
+            myReal wR, wI;
             
 #ifdef DEBUG
                 fprintf(stderr, "\tLast Layer out of %d\n", L);
@@ -540,8 +540,8 @@ static bool IS_paths_NOVEC_kernel (TCircuit *c,
 #ifdef NON_ZERO_PATHS
             l_non_zero_paths++;
 #endif
-            float pdf_reciprocal = 1.f / path_pdf;
-            float path_contR, path_contI;
+            myReal pdf_reciprocal = 1.f / path_pdf;
+            myReal path_contR, path_contI;
             complex_multiply (path_contR, path_contI, path_wR, path_wI, pdf_reciprocal, 0.f);
             
             // accumulate on local sums

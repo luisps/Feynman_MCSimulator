@@ -10,15 +10,15 @@
 #include "PreProcessorSettings.h"
 
 void layer_w (TCircuitLayer *layer, int l,
-                     unsigned long long current_state, unsigned long long next_state, float &wR, float &wI) {
-    float lwR = 1.f, lwI = 0.f;
+                     unsigned long long current_state, unsigned long long next_state, myReal &wR, myReal &wI) {
+    myReal lwR = 1.f, lwI = 0.f;
 
 #ifdef DEBUG_LAYER
     fprintf (stderr, "Evaluate layer %d with curr=%llu and next=%llu\n",l, current_state, next_state);
 #endif
     // Iterate over all gates G1P0
     for (int g=0 ; g<layer->num_type_gates[0] ; g++) {
-        float gatewR, gatewI;
+        myReal gatewR, gatewI;
         TGate1P0 *gate = &(((TGate1P0 *) layer->gates[0])[g]);
         const int qb_nbr = gate->qubit;
         const int curr_state_qb = qb_value(qb_nbr, current_state);
@@ -69,7 +69,7 @@ void layer_w (TCircuitLayer *layer, int l,
     }  // end all gates G1P0
     // Iterate over all gates G1P1
     for (int g=0 ; g<layer->num_type_gates[1] ; g++) {
-        float gatewR, gatewI;
+        myReal gatewR, gatewI;
         TGate1P1 *gate = &(((TGate1P1 *) layer->gates[1])[g]);
         const int qb_nbr = gate->fdata.qubit;
         const int curr_state_qb = qb_value(qb_nbr, current_state);
@@ -103,7 +103,7 @@ void layer_w (TCircuitLayer *layer, int l,
     
     // Iterate over all gates G2P0
     for (int g=0 ; g<layer->num_type_gates[2] ; g++) {
-        float gatewR, gatewI;
+        myReal gatewR, gatewI;
         TGate2P0 *gate = &(((TGate2P0 *) layer->gates[2])[g]);
         const int c_qb_nbr = gate->c_qubit;
         const int t_qb_nbr = gate->t_qubit;
@@ -140,7 +140,7 @@ void layer_w (TCircuitLayer *layer, int l,
     
     // Iterate over all gates G2P1
     for (int g=0 ; g<layer->num_type_gates[3] ; g++) {
-        float gatewR, gatewI;
+        myReal gatewR, gatewI;
         TGate2P1 *gate = &(((TGate2P1 *) layer->gates[3])[g]);
         const int c_qb_nbr = gate->fdata.c_qubit;
         const int t_qb_nbr = gate->fdata.t_qubit;
@@ -171,9 +171,9 @@ void layer_w (TCircuitLayer *layer, int l,
     wR = lwR; wI = lwI;
 }
 
-float layer_w_prob (TCircuitLayer *layer, int l,
-                     unsigned long long current_state, unsigned long long next_state, float &wR, float &wI) {
-    float prob;
+myReal layer_w_prob (TCircuitLayer *layer, int l,
+                     unsigned long long current_state, unsigned long long next_state, myReal &wR, myReal &wI) {
+    myReal prob;
     
     layer_w(layer, l, current_state, next_state, wR, wI);
 
@@ -182,13 +182,13 @@ float layer_w_prob (TCircuitLayer *layer, int l,
 }
 
 
-float layer_sample (TCircuitLayer* layer, int l, unsigned long long current_state,
+myReal layer_sample (TCircuitLayer* layer, int l, unsigned long long current_state,
                     unsigned long long& next_state,
-                    float& wR, float& wI,
-                    std::default_random_engine& e, std::uniform_real_distribution<float>& d,
+                    myReal& wR, myReal& wI,
+                    std::default_random_engine& e, std::uniform_real_distribution<myReal>& d,
                     bool forwardSample) {
     
-    float lwR = 1.f, lwI = 0.f, pdf=1.f;
+    myReal lwR = 1.f, lwI = 0.f, pdf=1.f;
     unsigned long long lnext_state=0ull;
 
 #ifdef DEBUG_LAYER
@@ -196,11 +196,11 @@ float layer_sample (TCircuitLayer* layer, int l, unsigned long long current_stat
 #endif
     // Iterate over all gates G1P0
     for (int g=0 ; g<layer->num_type_gates[0] ; g++) {
-        float gatewR, gatewI, gatepdf;
+        myReal gatewR, gatewI, gatepdf;
         TGate1P0 *gate = &(((TGate1P0 *) layer->gates[0])[g]);
         const int qb_nbr = gate->qubit;
         const int curr_state_qb = qb_value(qb_nbr, current_state);
-        const float rnd = d(e);  // generate random nbr in [0, 1[
+        const myReal rnd = d(e);  // generate random nbr in [0, 1[
                 
 #ifdef DEBUG_LAYER
             fprintf (stderr, "\tgate name: %d; curr: qb_nbr = %d -> qb=%d\n",gate->name,qb_nbr, curr_state_qb);
@@ -261,11 +261,11 @@ float layer_sample (TCircuitLayer* layer, int l, unsigned long long current_stat
     }  // end all gates G1P0
     // Iterate over all gates G1P1
     for (int g=0 ; g<layer->num_type_gates[1] ; g++) {
-        float gatewR, gatewI, gatepdf;
+        myReal gatewR, gatewI, gatepdf;
         TGate1P1 *gate = &(((TGate1P1 *) layer->gates[1])[g]);
         const int qb_nbr = gate->fdata.qubit;
         const int curr_state_qb = qb_value(qb_nbr, current_state);
-        const float rnd = d(e);  // generate random nbr in [0, 1[
+        const myReal rnd = d(e);  // generate random nbr in [0, 1[
 
 
 #ifdef DEBUG_LAYER
@@ -312,13 +312,13 @@ float layer_sample (TCircuitLayer* layer, int l, unsigned long long current_stat
     
     // Iterate over all gates G2P0
     for (int g=0 ; g<layer->num_type_gates[2] ; g++) {
-        float gatewR, gatewI, gatepdf;
+        myReal gatewR, gatewI, gatepdf;
         TGate2P0 *gate = &(((TGate2P0 *) layer->gates[2])[g]);
         const int c_qb_nbr = gate->c_qubit;
         const int t_qb_nbr = gate->t_qubit;
         const int curr_state_qbs = qb_value(c_qb_nbr, current_state)*2+qb_value(t_qb_nbr, current_state);
         int next_state_qbs = 0;
-        const float rnd = d(e);  // generate random nbr in [0, 1[
+        const myReal rnd = d(e);  // generate random nbr in [0, 1[
 
 #ifdef DEBUG_LAYER
             fprintf (stderr, "\tgate name: %d; curr: c_qb_nbr = %d , t_qb_nbr = %d -> qbs=%d\n",gate->name,c_qb_nbr,t_qb_nbr, curr_state_qbs);
@@ -363,12 +363,12 @@ float layer_sample (TCircuitLayer* layer, int l, unsigned long long current_stat
     
     // Iterate over all gates G2P1
     for (int g=0 ; g<layer->num_type_gates[3] ; g++) {
-        float gatewR, gatewI, gatepdf;
+        myReal gatewR, gatewI, gatepdf;
         TGate2P1 *gate = &(((TGate2P1 *) layer->gates[3])[g]);
         const int c_qb_nbr = gate->fdata.c_qubit;
         const int t_qb_nbr = gate->fdata.t_qubit;
         const int curr_state_qbs = qb_value(c_qb_nbr, current_state)*2+qb_value(t_qb_nbr, current_state);
-        const float rnd = d(e);  // generate random nbr in [0, 1[
+        const myReal rnd = d(e);  // generate random nbr in [0, 1[
 
         int next_state_qbs = 0;
         

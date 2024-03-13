@@ -1,5 +1,6 @@
 CXX      := g++
 CXXFLAGS := -pthread -O3
+# FLOATFLAG:= -D __FLOAT_AS_DOUBLE__
 LDFLAGS  := 
 BUILD    := ./build
 OBJ_DIR  := $(BUILD)/objects
@@ -20,13 +21,13 @@ all:	build $(APP_DIR)/$(TARGET)
 $(OBJ_DIR)/%.o: %.cpp
 	@mkdir -p $(@D)
 	module load gcc-11.3 ; \
-	$(CXX) $(CXXFLAGS) $(INCLUDE) -c $< -MMD -o $@
+	$(CXX) $(CXXFLAGS) $(FLOATFLAG) $(INCLUDE) -c $< -MMD -o $@
 
 $(APP_DIR)/$(TARGET): $(OBJECTS)
 	@mkdir -p $(@D)
 	@cp Feynman_MCSimulator/*.sh $(APP_DIR)
 	module load gcc-11.3 ; \
-	$(CXX) $(CXXFLAGS) -o $(APP_DIR)/$(TARGET) $^ $(LDFLAGS)
+	$(CXX) $(CXXFLAGS) $(FLOATFLAG) -o $(APP_DIR)/$(TARGET) $^ $(LDFLAGS)
 
 -include $(DEPENDENCIES)
 

@@ -1,19 +1,21 @@
 #!/bin/bash
-jobname="Feynman"
-filename="$jobname""_$1_$2_$3_$4_T$5_S$6"
+appname="Feynman"
 R_label=""
 if  [ $7 ] && [ $8 ]; then
 	R_label+=" -r $7 $8"
 fi
-for run in {1..3}
+
+for run in {1..5}
 do
+	filename="$appname""_$1_$2_$3_$4_T$5_S$6"
 	filename+="_L${run}"
-	L_label+=" -l ${run}"
+	L_label=" -l ${run}"
+	jobname="F""_$1_$2_S$6"
 sbatch <<EOT
 #!/bin/bash
 
-#SBATCH --job-name=Feynman
-#SBATCH --time=0:10:0
+#SBATCH --job-name=$jobname
+#SBATCH --time=00:10:0
 #SBATCH --partition=fct
 #SBATCH --qos=cpca095372023
 #SBATCH --output=$filename.o
@@ -38,3 +40,6 @@ fi
 exit 0
 EOT
 done
+
+
+

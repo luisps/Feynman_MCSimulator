@@ -18,6 +18,7 @@
 #include "layer.hpp"
 #include "PreProcessorSettings.h"
 #include "path.h"
+#include "PathVertex.h"
 
 // For time stats
 // https://www.geeksforgeeks.org/measure-execution-time-function-cpp/
@@ -62,31 +63,30 @@ static bool BD_paths_NOVEC_kernel (TCircuit *c,
 #endif
 
 static void _ForwardPath (TCircuit *c, unsigned long long init_state,
-                          std::vector<unsigned long long>& Fpath,
-                            std::vector<myReal>& Fpath_wR, std::vector<myReal>& Fpath_wI,
-                            std::vector<myReal>& Fpath_PwR, std::vector<myReal>& Fpath_PwI,
-                          std::vector<myReal>& Fpath_prob, std::vector<myReal>& Fpath_Pprob,
+                          PathVertexVector& Fpath,
                           std::default_random_engine& e, std::uniform_real_distribution<myReal>& d);
 
 static void _BackwardPath (TCircuit *c, unsigned long long final_state,
-                              std::vector<unsigned long long>& Bpath,
-                                std::vector<myReal>& Bpath_wR, std::vector<myReal>& Bpath_wI,
-                                std::vector<myReal>& Bpath_PwR, std::vector<myReal>& Bpath_PwI,
-                              std::vector<myReal>& Bpath_prob, std::vector<myReal>& Bpath_Pprob,
+                              PathVertexVector& Bpath,
                            std::default_random_engine& e, std::uniform_real_distribution<myReal>& d);
 
 static myReal _ConnectPath (TCircuitLayer* layer, const int l,
                      unsigned long long currentState,
-                       myReal Fpath_PwR, myReal Fpath_PwI, myReal Fpath_Pprob,
+                       PathVertexVector Fpath,
                        unsigned long long nextState,
-                       myReal Bpath_PwR, myReal Bpath_PwI, myReal Bpath_Pprob,
+                        PathVertexVector Bpath,
                        myReal& wR, myReal& wI);
 
-static myReal _ConnectPathMIS (TCircuitLayer* layer, const int l, const int num_layers,
+static myReal _ConnectPathMIS_OLD (TCircuitLayer* layer, const int l, const int num_layers,
                      std::vector<unsigned long long> Fpath,
                        myReal Fpath_PwR, myReal Fpath_PwI, std::vector<myReal> Fpath_prob, std::vector<myReal> Fpath_Pprob,
                         std::vector<unsigned long long> Bpath,
                        myReal Bpath_PwR, myReal Bpath_PwI, std::vector<myReal> Bpath_prob, std::vector<myReal> Bpath_Pprob,
+                       myReal& wR, myReal& wI);
+
+static myReal _ConnectPathMIS (TCircuitLayer* layer, const int l, const int num_layers,
+                     PathVertexVector Fpath,
+                       PathVertexVector Bpath,
                        myReal& wR, myReal& wI);
 
 #ifdef CONVERGENCE_STATS
@@ -453,6 +453,14 @@ static bool BD_paths_NOVEC_kernel (TCircuit *c,
     
     const int L = c->size->num_layers;   // number of layers in the circuit
     
+    PathVertexVector Fpath(L), Bpath(L+1);
+    
+    //std::vector<unsigned long long> Fpath;
+    //std::vector<myReal> Fpath_wR, Fpath_wI, Fpath_PwR, Fpath_PwI, Fpath_prob, Fpath_Pprob;
+    //std::vector<unsigned long long> Bpath;
+    //std::vector<myReal> Bpath_wR, Bpath_wI, Bpath_PwR, Bpath_PwI, Bpath_prob, Bpath_Pprob;
+     
+
     // iteratively generate samples
     for (s=0ull; s<n_samples ; s++) {
         
@@ -460,12 +468,20 @@ static bool BD_paths_NOVEC_kernel (TCircuit *c,
         fprintf (stderr, "Sample %llu:\n", s);
 #endif
         
-        std::vector<unsigned long long> Fpath;
-        std::vector<myReal> Fpath_wR, Fpath_wI, Fpath_PwR, Fpath_PwI, Fpath_prob, Fpath_Pprob;
-        _ForwardPath (c, init_state, Fpath, Fpath_wR, Fpath_wI, Fpath_PwR, Fpath_PwI, Fpath_prob, Fpath_Pprob, e, d);
-        
+        //std::vector<unsigned long long> Fpath;
+        //std::vector<myReal> Fpath_wR, Fpath_wI, Fpath_PwR, Fpath_PwI, Fpath_prob, Fpath_Pprob;
+        Fpath.clear();
+        /*Fpath_wR.clear();
+        Fpath_wI.clear();
+        Fpath_PwR.clear();
+        Fpath_PwI.clear();
+        Fpath_prob.clear();
+        Fpath_Pprob.clear();*/
+        //_ForwardPath (c, init_state, Fpath, Fpath_wR, Fpath_wI, Fpath_PwR, Fpath_PwI, Fpath_prob, Fpath_Pprob, e, d);
+        _ForwardPath (c, init_state, Fpath, e, d);
+
 #ifdef DEBUG
-        //print_path(Fpath);
+/*        //print_path(Fpath);
         fprintf (stderr, "\n\t\tFORWARD\n\n ");
         fprintf (stderr, "%llu ", Fpath[0]);
         for (l=1 ; l< L ; l++) {
@@ -483,15 +499,24 @@ static bool BD_paths_NOVEC_kernel (TCircuit *c,
         for (l=1 ; l< L ; l++) {
             fprintf (stderr, "-> %.5f ", Fpath_prob[l]);
         }
-        fprintf (stderr, "||\n");
+        §fprintf (stderr, "||\n"); */
 #endif
-        std::vector<unsigned long long> Bpath;
-        std::vector<myReal> Bpath_wR, Bpath_wI, Bpath_PwR, Bpath_PwI, Bpath_prob, Bpath_Pprob;
-        _BackwardPath (c, final_state, Bpath, Bpath_wR, Bpath_wI, Bpath_PwR, Bpath_PwI, Bpath_prob, Bpath_Pprob, e, d);
-        
+        //std::vector<unsigned long long> Bpath;
+        //std::vector<myReal> Bpath_wR, Bpath_wI, Bpath_PwR, Bpath_PwI, Bpath_prob, Bpath_Pprob;
+        Bpath.clear();
+        /*Bpath_wR.clear();
+        Bpath_wI.clear();
+        Bpath_PwR.clear();
+        Bpath_PwI.clear();
+        Bpath_prob.clear();
+        Bpath_Pprob.clear();*/
+
+        //_BackwardPath (c, final_state, Bpath, Bpath_wR, Bpath_wI, Bpath_PwR, Bpath_PwI, Bpath_prob, Bpath_Pprob, e, d);
+        _BackwardPath (c, final_state, Bpath, e, d);
+
 #ifdef DEBUG
         //print_path(Bpath);
-        fprintf (stderr, "\n\t\tBACKWARD\n\n ");
+       /* fprintf (stderr, "\n\t\tBACKWARD\n\n ");
         fprintf (stderr, "||\t%llu ", Bpath[1]);
         for (l=2 ; l<= L ; l++) {
             fprintf (stderr, "<- %llu ", Bpath[l]);
@@ -509,17 +534,19 @@ static bool BD_paths_NOVEC_kernel (TCircuit *c,
             fprintf (stderr, "<- %.5f ", Bpath_prob[l]);
         }
         fprintf (stderr, "\n");
-        fprintf (stderr, "\n");
+        fprintf (stderr, "\n");*/
 #endif
         
         for (l=0 ; l < L ; l++ ) {  // generate all L different paths
             myReal prob, wR, wI;
             TCircuitLayer *layer = &c->layers[l];
-            const unsigned long long currentState = Fpath[l];
-            const unsigned long long nextState = Bpath[l+1];
-            
+            //const unsigned long long currentState = Fpath[l];
+            const unsigned long long currentState = Fpath.data[l].state;
+            //const unsigned long long nextState = Bpath[l+1];
+            const unsigned long long nextState = Bpath.data[l+1].state;
+
 #ifdef DEBUG
-            fprintf (stderr, "Connect state %llu to state %llu through layer %d:\n", currentState, nextState, l);
+/*            fprintf (stderr, "Connect state %llu to state %llu through layer %d:\n", currentState, nextState, l);
             fprintf (stderr, "Connecting path is:\n%llu ", Fpath[0]);
             for (int ll=1; ll <=l ; ll++) {
                 fprintf (stderr, " -> %llu ", Fpath[ll]);
@@ -529,20 +556,36 @@ static bool BD_paths_NOVEC_kernel (TCircuit *c,
             for (int ll=l+2; ll <=L ; ll++) {
                 fprintf (stderr, " <- %llu ", Bpath[ll]);
             }
-            fprintf (stderr, "\n");
+             fprintf (stderr, "\n");*/
 #endif
             if (MIS) {
                 // connect deterministically fPath to bPath through layer l using MIS
-                prob = _ConnectPathMIS (layer, l, L,
+                /*prob = _ConnectPathMIS (layer, l, L,
                                      Fpath, Fpath_PwR[l], Fpath_PwI[l], Fpath_prob, Fpath_Pprob,
                                      Bpath, Bpath_PwR[l+1], Bpath_PwI[l+1], Bpath_prob, Bpath_Pprob,
+                                     wR, wI);*/
+                /*prob = _ConnectPathMIS (layer, l, L,
+                                     Fpath,
+                                     Bpath, Bpath_PwR[l+1], Bpath_PwI[l+1], Bpath_prob, Bpath_Pprob,
+                                     wR, wI);*/
+                prob = _ConnectPathMIS (layer, l, L,
+                                     Fpath,
+                                     Bpath,
                                      wR, wI);
             }
             else {
                 // connect deterministically fPath to bPath through layer l
-                prob = _ConnectPath (layer, l,
+                /*prob = _ConnectPath (layer, l,
                                  currentState, Fpath_PwR[l], Fpath_PwI[l], Fpath_Pprob[l],
                                  nextState, Bpath_PwR[l+1], Bpath_PwI[l+1], Bpath_Pprob[l+1],
+                                 wR, wI);*/
+                /*prob = _ConnectPath (layer, l,
+                                 currentState, Fpath,
+                                 nextState, Bpath_PwR[l+1], Bpath_PwI[l+1], Bpath_Pprob[l+1],
+                                 wR, wI);*/
+                prob = _ConnectPath (layer, l,
+                                 currentState, Fpath,
+                                 nextState, Bpath,
                                  wR, wI);
             }
 #ifdef DEBUG
@@ -573,224 +616,282 @@ static bool BD_paths_NOVEC_kernel (TCircuit *c,
 }
     
 static void _ForwardPath (TCircuit *c, unsigned long long init_state,
-                              std::vector<unsigned long long>& Fpath,
-                              std::vector<myReal>& Fpath_wR, std::vector<myReal>& Fpath_wI,
-                              std::vector<myReal>& Fpath_PwR, std::vector<myReal>& Fpath_PwI,
-                              std::vector<myReal>& Fpath_prob, std::vector<myReal>& Fpath_Pprob,
+                          PathVertexVector& Fpath,
                           std::default_random_engine& e, std::uniform_real_distribution<myReal>& d) {
-    
-    
+        
+        
     unsigned long long current_state, next_state;
+    int ndx;
+    ndx = Fpath.append();
     // The forward path 1st node is the initial state
-    Fpath.push_back(init_state);
-    Fpath_wR.push_back(1.0f);     // path amplituide is 1 + i0
-    Fpath_wI.push_back(0.0f);     // path amplituide is 1 + i0
-    Fpath_PwR.push_back(1.0f);    // product of nodes' amplitudes is 1. + i0
-    Fpath_PwI.push_back(0.0f);    // product of nodes' amplitudes is 1. + i0
-    Fpath_prob.push_back(1.0f);   // nodes' generation probability is 1.
-    Fpath_Pprob.push_back(1.0f);   // product of nodes' generation probabilities is 1.
-    
+    Fpath.data[ndx].state = init_state;
+    Fpath.data[ndx].wR = 1.0;
+    Fpath.data[ndx].wI = 0.0;
+    Fpath.data[ndx].PwR = 1.0;
+    Fpath.data[ndx].PwI = 0.0;
+    Fpath.data[ndx].prob = 1.0;
+    Fpath.data[ndx].Pprob = 1.0;
     current_state = init_state;
-    
-    // Evolve through all gates' layes (starting at 0) , except the last one
-    // The last layer will be later on deterministically connected to the final state
-    for (int l=0 ; l<c->size->num_layers-1 ; l++) {
-        myReal l_wR, l_wI, l_prob, auxR, auxI;
         
-        TCircuitLayer *layer = &(c->layers[l]);
-        
-        // sample this layer
-        l_prob = layer_sample(layer, l, current_state, next_state, l_wR, l_wI, e, d);
-        
-        // add to Fpath
-        Fpath.push_back(next_state);
-        Fpath_wR.push_back (l_wR);
-        Fpath_wI.push_back (l_wI);
-        complex_multiply (auxR, auxI, Fpath_PwR.back(), Fpath_PwI.back(), l_wR, l_wI);
-        Fpath_PwR.push_back (auxR);
-        Fpath_PwI.push_back (auxI);
-        Fpath_prob.push_back (l_prob);
-        auxR = Fpath_Pprob.back() * l_prob;
-        Fpath_Pprob.push_back (auxR);
-        
-        current_state = next_state;
+        // Evolve through all gates' layes (starting at 0) , except the last one
+        // The last layer will be later on deterministically connected to the final state
+        for (int l=0 ; l<c->size->num_layers-1 ; l++) {
+            myReal l_wR, l_wI, l_prob, auxR, auxI;
+            
+            TCircuitLayer *layer = &(c->layers[l]);
+            
+            // sample this layer
+            l_prob = layer_sample(layer, l, current_state, next_state, l_wR, l_wI, e, d);
+            
+            // add to Fpath
+            ndx = Fpath.append();
+            Fpath.data[ndx].state = next_state;
+            Fpath.data[ndx].wR = l_wR;
+            Fpath.data[ndx].wI = l_wI;
+            complex_multiply (auxR, auxI, Fpath.data[ndx-1].PwR, Fpath.data[ndx-1].PwI, l_wR, l_wI);
+            Fpath.data[ndx].PwR = auxR;
+            Fpath.data[ndx].PwI = auxI;
+            Fpath.data[ndx].prob = l_prob;
+            Fpath.data[ndx].Pprob = Fpath.data[ndx-1].Pprob * l_prob;
+
+            current_state = next_state;
+        }
+        return;
     }
-    return;
-}
+
     
 static void _BackwardPath (TCircuit *c, unsigned long long final_state,
-                              std::vector<unsigned long long>& Bpath,
-                                std::vector<myReal>& Bpath_wR, std::vector<myReal>& Bpath_wI,
-                                std::vector<myReal>& Bpath_PwR, std::vector<myReal>& Bpath_PwI,
-                              std::vector<myReal>& Bpath_prob, std::vector<myReal>& Bpath_Pprob,
-                           std::default_random_engine& e, std::uniform_real_distribution<myReal>& d) {
-    
-    
+                            PathVertexVector& Bpath,
+                            std::default_random_engine& e, std::uniform_real_distribution<myReal>& d) {
+        
     unsigned long long current_state, next_state;
+    int ndx;
     // The backward path 1st node is the final state: to revert later
-    Bpath.push_back(final_state);
-    Bpath_wR.push_back(1.0f);     // path amplituide is 1 + i0
-    Bpath_wI.push_back(0.0f);     // path amplituide is 1 + i0
-    Bpath_PwR.push_back(1.0f);    // product of nodes' amplitudes is 1. + i0
-    Bpath_PwI.push_back(0.0f);    // product of nodes' amplitudes is 1. + i0
-    Bpath_prob.push_back(1.0f);   // nodes' generation probability is 1.
-    Bpath_Pprob.push_back(1.0f);   // product of nodes' generation probabilities is 1.
-    
+    ndx = Bpath.prepend();
+    Bpath.data[ndx].state = final_state;
+    Bpath.data[ndx].wR = 1.0;
+    Bpath.data[ndx].wI = 0.0;
+    Bpath.data[ndx].PwR = 1.0;
+    Bpath.data[ndx].PwI = 0.0;
+    Bpath.data[ndx].prob= 1.0;
+    Bpath.data[ndx].Pprob = 1.0;
+        
     current_state = final_state;
-    
+        
     // Evolve through all gates' layes (starting at the last one (num_lkayers-1)) , except the first one
     // The first layer will be later on deterministically connected to the initial state
     for (int l=c->size->num_layers-1 ; l>0 ; l--) {
         myReal l_wR, l_wI, l_prob, auxR, auxI;
-        
+            
         TCircuitLayer *layer = &(c->layers[l]);
-        
+            
         // sample this layer
         l_prob = layer_sample(layer, l, current_state, next_state, l_wR, l_wI, e, d, false);
-        
-        // add to Fpath
-        Bpath.push_back(next_state);
-        Bpath_wR.push_back (l_wR);
-        Bpath_wI.push_back (l_wI);
-        complex_multiply (auxR, auxI, Bpath_PwR.back(), Bpath_PwI.back(), l_wR, l_wI);
-        Bpath_PwR.push_back (auxR);
-        Bpath_PwI.push_back (auxI);
-        Bpath_prob.push_back (l_prob);
-        auxR = Bpath_Pprob.back() * l_prob;
-        Bpath_Pprob.push_back (auxR);
-        
+            
+        // add to Bpath
+        ndx = Bpath.prepend();
+        Bpath.data[ndx].state = next_state;
+        Bpath.data[ndx].wR = l_wR;
+        Bpath.data[ndx].wI = l_wI;
+        complex_multiply (auxR, auxI, Bpath.data[ndx+1].PwR, Bpath.data[ndx+1].PwI, l_wR, l_wI);
+        Bpath.data[ndx].PwR = auxR;
+        Bpath.data[ndx].PwI = auxI;
+        Bpath.data[ndx].prob= l_prob;
+        Bpath.data[ndx].Pprob = Bpath.data[ndx+1].Pprob * l_prob;
+            
         current_state = next_state;
     }
-    // reverse the vectors orders: make sure the new[0] means nothing
-    
     // to make sure that the element index [0] on the backward path means nothing add 0. to the vectors
-    // then reverse
-    Bpath.push_back(0ull);
-    Bpath_wR.push_back (0.f);
-    Bpath_wI.push_back (0.f);
-    Bpath_PwR.push_back (0.f);
-    Bpath_PwI.push_back (0.f);
-    Bpath_prob.push_back (0.f);
-    Bpath_Pprob.push_back (0.f);
-    
-    std::reverse(Bpath.begin(), Bpath.end());
-    std::reverse(Bpath_wR.begin(), Bpath_wR.end());
-    std::reverse(Bpath_wI.begin(), Bpath_wI.end());
-    std::reverse(Bpath_PwR.begin(), Bpath_PwR.end());
-    std::reverse(Bpath_PwI.begin(), Bpath_PwI.end());
-    std::reverse(Bpath_prob.begin(), Bpath_prob.end());
-    std::reverse(Bpath_Pprob.begin(), Bpath_Pprob.end());
-    
+    ndx = Bpath.prepend();
+    Bpath.data[ndx].state = 0ull;
+    Bpath.data[ndx].wR = 0.0;
+    Bpath.data[ndx].wI = 0.0;
+    Bpath.data[ndx].PwR = 0.0;
+    Bpath.data[ndx].PwI = 0.0;
+    Bpath.data[ndx].prob= 0.0;
+    Bpath.data[ndx].Pprob = 0.0;
+        
     return;
 }
-    
+
 static myReal _ConnectPathMIS (TCircuitLayer* layer, const int l, const int num_layers,
-                         std::vector<unsigned long long> Fpath,
-                           myReal Fpath_PwR, myReal Fpath_PwI, std::vector<myReal> Fpath_prob, std::vector<myReal> Fpath_Pprob,
-                            std::vector<unsigned long long> Bpath,
-                           myReal Bpath_PwR, myReal Bpath_PwI, std::vector<myReal> Bpath_prob, std::vector<myReal> Bpath_Pprob,
-                                  myReal& wR, myReal& wI) {
-    myReal lwR, lwI, prob;
+                            PathVertexVector Fpath,
+                            PathVertexVector Bpath,
+                            myReal& wR, myReal& wI) {
+    myReal lwR, lwI;
     unsigned long long currentState, nextState;
-    
-    currentState = Fpath[l];
-    nextState = Bpath[l+1];
-    prob = layer_w_prob (layer, l, currentState, nextState, lwR, lwI);
-    
-#ifdef DEBUG
-    fprintf (stderr, "\nCONNECT_MIS\n");
-    fprintf (stderr, "Fsegment Pw = %.5f + i %.5f\n", Fpath_PwR, Fpath_PwI);
-    fprintf (stderr, "C layer w = %e + i %e\n", lwR, lwI);
-    fprintf (stderr, "Bsegment Pw = %.5f + i %.5f\n", Bpath_PwR, Bpath_PwI);
-    fprintf (stderr, "C prob = %e \n", prob);
-#endif
-
-    
+        
+    currentState = Fpath.data[l].state;
+    nextState = Bpath.data[l+1].state;
+    const myReal prob = layer_w_prob (layer, l, currentState, nextState, lwR, lwI);
+        
+    #ifdef DEBUG
+        /*fprintf (stderr, "\nCONNECT_MIS\n");
+        fprintf (stderr, "Fsegment Pw = %.5f + i %.5f\n", Fpath_PwR, Fpath_PwI);
+        fprintf (stderr, "C layer w = %e + i %e\n", lwR, lwI);
+        fprintf (stderr, "Bsegment Pw = %.5f + i %.5f\n", Bpath_PwR, Bpath_PwI);
+        fprintf (stderr, "C prob = %e \n", prob);*/
+    #endif
+        
+        
     // compute path w
-    complex_multiply(lwR, lwI, lwR, lwI, Fpath_PwR, Fpath_PwI);
-    complex_multiply(lwR, lwI, lwR, lwI, Bpath_PwR, Bpath_PwI);
+    complex_multiply(lwR, lwI, lwR, lwI, Fpath.data[l].PwR, Fpath.data[l].PwI);
+    complex_multiply(lwR, lwI, lwR, lwI, Bpath.data[l+1].PwR, Bpath.data[l+1].PwI);
+        
+    // compute path prob if it had been generated stochastically
+    // i.e. without a det connection at layer l
+    const myReal path_prob = Fpath.data[l].Pprob * prob * Bpath.data[l+1].Pprob ;
 
-    if (complex_abs_square(lwR, lwI) <=0.f) { // terminate path
+    if (complex_abs_square(lwR, lwI) <=0 || path_prob <= 0) { // terminate path
         wR = 0.f;
         wI = 0.f;
         return 0.f;
     }
 
-#ifdef DEBUG
-    fprintf (stderr, "Path w = %.5f + i %.5f\n", lwR, lwI);
-#endif
-
- 
-    // store probablities in a vector
-    // compute product of all probabilities (to be used only after excluding (dividing) one per iteration)
-    std::vector<myReal> path_probs;
-    for (int ll=0 ; ll < l+1  ; ll++ ) {  // forward
-        path_probs.push_back(Fpath_prob[ll]);
-    }
-    path_probs.push_back(prob);   // current layer
-    for (int ll=l+1 ; ll <= num_layers  ; ll++ ) {  // forward
-        path_probs.push_back(Bpath_prob[ll]);
-    }
-#ifdef DEBUG
-    fprintf (stderr, "Path probs = [ %e ", path_probs[0]);
-    for (int ll=1 ; ll <= num_layers+1 ; ll++)
-        fprintf (stderr, ", %e ", path_probs[ll]);
-    fprintf (stderr, "]\n");
-#endif
+    #ifdef DEBUG
+        fprintf (stderr, "Path w = %.5f + i %.5f\n", lwR, lwI);
+        fprintf (stderr, "Connection prob = %e ; Path prob = %e\n", prob, path_prob);
+    #endif
 
     // compute MIS_weight as the sum of
     // the probabilities of the num_layers alternative deterministic connections
     myReal MIS_weight_reciprocal = 0.f;
     for (int det_connect=0 ; det_connect < num_layers ; det_connect++) {
-        myReal prob_prod=1.f ;
-        // compute probability with deterministic transition across layer det_connect
-        for (int ll=0 ; ll <= num_layers+1 ; ll++) {
-            prob_prod *= ((det_connect+1) == ll ? 1.f : path_probs[ll]);
-        }
-        /*prob_prod = Fpath_Pprob[det_connect];
-        prob_prod *= prob;
-        prob_prod *= Bpath_Pprob[det_connect+1];*/
+        myReal prob_to_remove = prob;   // if det_connect == l
+        prob_to_remove = (det_connect < l ? Fpath.data[det_connect+1].prob : prob_to_remove);
+        prob_to_remove = (det_connect > l ? Bpath.data[det_connect].prob : prob_to_remove);
+        
+        myReal prob_prod= path_prob / prob_to_remove ;
+            
         MIS_weight_reciprocal += prob_prod;
-#ifdef DEBUG
-    fprintf (stderr, "Path prob with det connection layer %d = %e \n", det_connect, prob_prod);
-#endif
+
+        #ifdef DEBUG
+            fprintf (stderr, "(l=%d) Det connection layer %d : NEW Path prob = %e (Prob to remove = %e)\n", l, det_connect,prob_prod,prob_to_remove);
+        #endif
     }
+
     // divide the above sum by the number of summands
     // note: we divide because we are computing the reciprocal of the MIS_weight
     MIS_weight_reciprocal /= num_layers;
 
-#ifdef DEBUG
-    fprintf (stderr, "MIS weight reciprocal = %e \n", MIS_weight_reciprocal   );
-#endif
+    #ifdef DEBUG
+        fprintf (stderr, "MIS weight reciprocal : NEW = %e\n", MIS_weight_reciprocal);
+    #endif
 
     wR = lwR;
     wI = lwI;
-    
+        
     return MIS_weight_reciprocal;
+
+}
+    
+static myReal _ConnectPathMIS_OLD (TCircuitLayer* layer, const int l, const int num_layers,
+                             std::vector<unsigned long long> Fpath,
+                               myReal Fpath_PwR, myReal Fpath_PwI, std::vector<myReal> Fpath_prob, std::vector<myReal> Fpath_Pprob,
+                                std::vector<unsigned long long> Bpath,
+                               myReal Bpath_PwR, myReal Bpath_PwI, std::vector<myReal> Bpath_prob, std::vector<myReal> Bpath_Pprob,
+                                      myReal& wR, myReal& wI) {
+        myReal lwR, lwI, prob;
+        unsigned long long currentState, nextState;
+        
+        currentState = Fpath[l];
+        nextState = Bpath[l+1];
+        prob = layer_w_prob (layer, l, currentState, nextState, lwR, lwI);
+        
+    #ifdef DEBUG
+        fprintf (stderr, "\nCONNECT_MIS\n");
+        fprintf (stderr, "Fsegment Pw = %.5f + i %.5f\n", Fpath_PwR, Fpath_PwI);
+        fprintf (stderr, "C layer w = %e + i %e\n", lwR, lwI);
+        fprintf (stderr, "Bsegment Pw = %.5f + i %.5f\n", Bpath_PwR, Bpath_PwI);
+        fprintf (stderr, "C prob = %e \n", prob);
+    #endif
+
+        
+        // compute path w
+        complex_multiply(lwR, lwI, lwR, lwI, Fpath_PwR, Fpath_PwI);
+        complex_multiply(lwR, lwI, lwR, lwI, Bpath_PwR, Bpath_PwI);
+
+        if (complex_abs_square(lwR, lwI) <=0.f) { // terminate path
+            wR = 0.f;
+            wI = 0.f;
+            return 0.f;
+        }
+
+    #ifdef DEBUG
+        fprintf (stderr, "Path w = %.5f + i %.5f\n", lwR, lwI);
+    #endif
+
+     
+        // store probablities in a vector
+        // compute product of all probabilities (to be used only after excluding (dividing) one per iteration)
+        std::vector<myReal> path_probs;
+        for (int ll=0 ; ll < l+1  ; ll++ ) {  // forward
+            path_probs.push_back(Fpath_prob[ll]);
+        }
+        path_probs.push_back(prob);   // current layer
+        for (int ll=l+1 ; ll <= num_layers  ; ll++ ) {  // forward
+            path_probs.push_back(Bpath_prob[ll]);
+        }
+    #ifdef DEBUG
+        fprintf (stderr, "Path probs = [ %e ", path_probs[0]);
+        for (int ll=1 ; ll <= num_layers+1 ; ll++)
+            fprintf (stderr, ", %e ", path_probs[ll]);
+        fprintf (stderr, "]\n");
+    #endif
+
+        // compute MIS_weight as the sum of
+        // the probabilities of the num_layers alternative deterministic connections
+        myReal MIS_weight_reciprocal = 0.f;
+        for (int det_connect=0 ; det_connect < num_layers ; det_connect++) {
+            myReal prob_prod=1.f ;
+            // compute probability with deterministic transition across layer det_connect
+            for (int ll=0 ; ll <= num_layers+1 ; ll++) {
+                prob_prod *= ((det_connect+1) == ll ? 1.f : path_probs[ll]);
+            }
+            /*prob_prod = Fpath_Pprob[det_connect];
+            prob_prod *= prob;
+            prob_prod *= Bpath_Pprob[det_connect+1];*/
+            MIS_weight_reciprocal += prob_prod;
+    #ifdef DEBUG
+        fprintf (stderr, "Path prob with det connection layer %d = %e \n", det_connect, prob_prod);
+    #endif
+        }
+        // divide the above sum by the number of summands
+        // note: we divide because we are computing the reciprocal of the MIS_weight
+        MIS_weight_reciprocal /= num_layers;
+
+    #ifdef DEBUG
+        fprintf (stderr, "MIS weight reciprocal = %e \n", MIS_weight_reciprocal   );
+    #endif
+
+        wR = lwR;
+        wI = lwI;
+        
+        return MIS_weight_reciprocal;
 
 }
 
 static myReal _ConnectPath (TCircuitLayer* layer, const int l,
-                       unsigned long long currentState,
-                         myReal Fpath_PwR, myReal Fpath_PwI, myReal Fpath_Pprob,
-                         unsigned long long nextState,
-                         myReal Bpath_PwR, myReal Bpath_PwI, myReal Bpath_Pprob,
-                       myReal& wR, myReal& wI) {
-    
+                        unsigned long long currentState,
+                        PathVertexVector Fpath,
+                        unsigned long long nextState,
+                        PathVertexVector Bpath,
+                        myReal& wR, myReal& wI) {
+        
     myReal lwR, lwI, prob;
     layer_w(layer, l, currentState, nextState, lwR, lwI);
-#ifdef DEBUG
-    fprintf (stderr, "\nCONNECT\n");
-    fprintf (stderr, "Fsegment Pw = %.5f + i %.5f\n", Fpath_PwR, Fpath_PwI);
-    fprintf (stderr, "C layer w = %.5f + i %.5f\n", lwR, lwI);
-    fprintf (stderr, "Bsegment Pw = %.5f + i %.5f\n", Bpath_PwR, Bpath_PwI);
-#endif
+    #ifdef DEBUG
+        /*fprintf (stderr, "\nCONNECT\n");
+        fprintf (stderr, "Fsegment Pw = %.5f + i %.5f\n", Fpath_PwR, Fpath_PwI);
+        fprintf (stderr, "C layer w = %.5f + i %.5f\n", lwR, lwI);
+        fprintf (stderr, "Bsegment Pw = %.5f + i %.5f\n", Bpath_PwR, Bpath_PwI); */
+    #endif
     // layer_weight = Fpath_Pw * (layer_weight * Bpath_Pw)
-    complex_multiply(lwR, lwI, lwR, lwI, Bpath_PwR, Bpath_PwI);
-    complex_multiply(lwR, lwI, lwR, lwI, Fpath_PwR, Fpath_PwI);
+    complex_multiply(lwR, lwI, lwR, lwI, Bpath.data[l+1].PwR, Bpath.data[l+1].PwI);
+    complex_multiply(lwR, lwI, lwR, lwI, Fpath.data[l].PwR, Fpath.data[l].PwI);
 
     // prob = Fpath_Pprob * 1.0 * Bpath_Pprob
-    prob = Fpath_Pprob * Bpath_Pprob;
+    prob = Fpath.data[l].Pprob * Bpath.data[l+1].Pprob;
     wR = lwR;
     wI = lwI;
 

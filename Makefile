@@ -7,7 +7,7 @@ OBJ_DIR  := $(BUILD)/objects
 APP_DIR  := $(BUILD)/apps
 SHELL	 := /bin/bash
 TARGET   := Feynman
-INCLUDE  := -IFeynman_MCSimulator/simulators/ -IFeynman_MCSimulator/ -I/Feynman_MCSimulator/pcg_random
+INCLUDE  := -IFeynman_MCSimulator/simulators/ -IFeynman_MCSimulator/ -IFeynman_MCSimulator/pcg_random/
 SRC      :=                      \
    $(wildcard Feynman_MCSimulator/simulators/*.cpp) \
    $(wildcard Feynman_MCSimulator/*.cpp)         \

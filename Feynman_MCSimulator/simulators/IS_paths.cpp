@@ -11,6 +11,7 @@
 #include <condition_variable>
 #include <vector>
 #include <random>
+#include "pcg_random.hpp"
 
 #include "complex.h"
 #include "layer.hpp"
@@ -67,13 +68,15 @@ static bool IS_paths_NOVEC_T (TCircuit *c,
 static bool IS_paths_NOVEC_kernel (TCircuit *c,
                 unsigned long long init_state, unsigned long long final_state, const unsigned long long n_samples,
                 myReal &sumR, myReal &sumI,
-                std::default_random_engine& e, std::uniform_real_distribution<myReal>& d,
+                                   pcg32& e,
+                                   std::uniform_real_distribution<myReal>& d,
                                    int& non_zero_paths);
 #else
     static bool IS_paths_NOVEC_kernel (TCircuit *c,
                 unsigned long long init_state, unsigned long long final_state, const unsigned long long n_samples,
                 myReal &sumR, myReal &sumI,
-                                       std::default_random_engine& e, std::uniform_real_distribution<myReal>& d);
+                                       pcg32& e,
+                                       std::uniform_real_distribution<myReal>& d);
 #endif
 
 #ifdef CONVERGENCE_STATS
@@ -305,7 +308,7 @@ static bool IS_paths_NOVEC_NOT (TCircuit *c,
     // thread local random number generator (seeded by a local random device)
     // see https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2013/n3551.pdf
     std::random_device rdev{};
-    thread_local std::default_random_engine e{rdev()};
+    thread_local pcg32 e{rdev()};
     std::uniform_real_distribution<myReal>d{0.0,1.0};  // uniform distribution in[0,1[ (myReal)
         
 #ifdef NON_ZERO_PATHS
@@ -328,7 +331,7 @@ static bool IS_paths_NOVEC_T (TCircuit *c,
     // thread local random number generator (seeded by a local random device)
     // see https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2013/n3551.pdf
     std::random_device rdev{};
-    thread_local std::default_random_engine e{rdev()};
+    thread_local pcg32 e{rdev()};
     std::uniform_real_distribution<myReal>d{0.0,1.0};  // uniform distribution in[0,1[ (myReal)
         
     unsigned long long n_samples=0ull;
@@ -405,13 +408,15 @@ static bool IS_paths_NOVEC_T (TCircuit *c,
 static bool IS_paths_NOVEC_kernel (TCircuit *c,
                 unsigned long long init_state, unsigned long long final_state, const unsigned long long n_samples,
                 myReal &sumR, myReal &sumI,
-                std::default_random_engine& e, std::uniform_real_distribution<myReal>& d,
+                pcg32& e,
+                std::uniform_real_distribution<myReal>& d,
                 int& non_zero_paths) {
 #else
     static bool IS_paths_NOVEC_kernel (TCircuit *c,
                 unsigned long long init_state, unsigned long long final_state, const unsigned long long n_samples,
                 myReal &sumR, myReal &sumI,
-                std::default_random_engine& e, std::uniform_real_distribution<myReal>& d) {
+                pcg32& e,
+                std::uniform_real_distribution<myReal>& d) {
 #endif
     
     unsigned long long s;   // sample counter

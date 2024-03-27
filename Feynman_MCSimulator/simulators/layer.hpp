@@ -10,6 +10,7 @@
 
 #include <stdio.h>
 #include <random>
+#include "pcg_random.hpp"
 
 #include "circuit.h"
 #include "gates.h"
@@ -26,6 +27,7 @@ myReal layer_w_prob (TCircuitLayer *layer, int l,
 myReal layer_sample (TCircuitLayer* layer, int l, unsigned long long current_state,
                     unsigned long long& next_state,
                     myReal& wR, myReal& wI,
-                    std::default_random_engine& e, std::uniform_real_distribution<myReal>& d, bool forwardSample=true);
+                     pcg32& e,
+                     std::uniform_real_distribution<myReal>& d, bool forwardSample=true);
 
 #endif /* layer_hpp */

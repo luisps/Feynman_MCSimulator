@@ -8,7 +8,7 @@
 #ifndef myReal_h
 #define myReal_h
 
-//#define __FLOAT_AS_DOUBLE__
+#define __FLOAT_AS_DOUBLE__
 
 #ifdef __FLOAT_AS_DOUBLE__
 #define myReal double

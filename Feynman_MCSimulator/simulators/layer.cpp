@@ -8,6 +8,7 @@
 #include "layer.hpp"
 #include <random>
 #include "PreProcessorSettings.h"
+#include "pcg_random.hpp"
 
 void layer_w (TCircuitLayer *layer, int l,
                      unsigned long long current_state, unsigned long long next_state, myReal &wR, myReal &wI) {
@@ -185,7 +186,8 @@ myReal layer_w_prob (TCircuitLayer *layer, int l,
 myReal layer_sample (TCircuitLayer* layer, int l, unsigned long long current_state,
                     unsigned long long& next_state,
                     myReal& wR, myReal& wI,
-                    std::default_random_engine& e, std::uniform_real_distribution<myReal>& d,
+                    pcg32& e,
+                    std::uniform_real_distribution<myReal>& d,
                     bool forwardSample) {
     
     myReal lwR = 1.f, lwI = 0.f, pdf=1.f;

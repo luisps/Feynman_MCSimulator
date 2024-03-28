@@ -540,6 +540,8 @@ static bool BD_paths_NOVEC_kernel (TCircuit *c,
                 prob = _ConnectPathMIS (layer, l, L,
                                      Fpath, Bpath, ProbBuffer, ProbFBuffer, ProbBBuffer,
                                             wR, wI);
+                
+                // prob is in fact the reciprocal of the MIS weight.
             }
             else {
                 // connect deterministically fPath to bPath through layer l
@@ -676,7 +678,7 @@ static void _BackwardPath (TCircuit *c, unsigned long long final_state,
     return;
 }
     
-static myReal _ConnectPathMIS (TCircuitLayer* layer, const int l, const int num_layers,
+static myReal _ConnectPathMIS (TCircuitLayer* layer, const int l, const int L,
                                 PathVertexVector Fpath,
                                 PathVertexVector Bpath,
                                 myReal prob_Buffer[],myReal probFor_Buffer[],myReal probBack_Buffer[],
@@ -714,16 +716,16 @@ static myReal _ConnectPathMIS (TCircuitLayer* layer, const int l, const int num_
         prob_Buffer[i-1] = Fpath.data[i].prob;
     }
     prob_Buffer[l] = prob;
-    for (i=l+1 ; i<num_layers ; i++) {
+    for (i=l+1 ; i<L ; i++) {
         prob_Buffer[i] = Bpath.data[i].prob;
     }
 
     // compute forward and backward products
     probFor_Buffer[0] = prob_Buffer[0];
-    probBack_Buffer[num_layers-1] = prob_Buffer[num_layers-1];
-    for (i=1 ; i<=num_layers-1 ; i++) {
+    probBack_Buffer[L-1] = prob_Buffer[L-1];
+    for (i=1 ; i<=L-1 ; i++) {
         probFor_Buffer[i] = probFor_Buffer[i-1] * prob_Buffer[i];
-        probBack_Buffer[num_layers-i-1] = probBack_Buffer[num_layers-i] * prob_Buffer[num_layers-i-1];
+        probBack_Buffer[L-i-1] = probBack_Buffer[L-i] * prob_Buffer[L-i-1];
     }
 
     #ifdef DEBUG
@@ -734,10 +736,10 @@ static myReal _ConnectPathMIS (TCircuitLayer* layer, const int l, const int num_
     // compute MIS_weight as the sum of
     // the probabilities of the num_layers alternative deterministic connections
     myReal MIS_weight_reciprocal = 0.f;
-    for (int det_connect=0 ; det_connect < num_layers ; det_connect++) {
+    for (int det_connect=0 ; det_connect < L ; det_connect++) {
         myReal path_prob = 1.;
         if (det_connect > 0) path_prob = probFor_Buffer[det_connect-1];
-        if (det_connect < (num_layers-1)) path_prob *= probBack_Buffer[det_connect+1];
+        if (det_connect < (L-1)) path_prob *= probBack_Buffer[det_connect+1];
 
         MIS_weight_reciprocal += path_prob;
 
@@ -746,9 +748,9 @@ static myReal _ConnectPathMIS (TCircuitLayer* layer, const int l, const int num_
             #endif
     }
 
-    // divide the above sum by the number of summands
+    // divide the above sum by the number of summands (L)
     // note: we divide because we are computing the reciprocal of the MIS_weight
-    MIS_weight_reciprocal /= num_layers;
+    MIS_weight_reciprocal /= L;
 
     #ifdef DEBUG
         fprintf (stderr, "MIS weight reciprocal : NEW = %e\n", MIS_weight_reciprocal);

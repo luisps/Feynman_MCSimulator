@@ -16,6 +16,20 @@
 #include "gates.h"
 #include "complex.h"
 #include "myReal.h"
+#include "CState.h"
+
+void layer_w (TCircuitLayer *layer, int l,
+              CState const * const current_state, CState const * const next_state, myReal &wR, myReal &wI);
+
+myReal layer_w_prob (TCircuitLayer *layer, int l,
+              CState const * const current_state, CState const * const next_state, myReal &wR, myReal &wI);
+
+
+myReal layer_sample (TCircuitLayer* layer, int l, CState const * const current_state,
+                    CState * const next_state,
+                    myReal& wR, myReal& wI,
+                     pcg32& e,
+                     std::uniform_real_distribution<myReal>& d, bool forwardSample=true);
 
 void layer_w (TCircuitLayer *layer, int l,
               unsigned long long current_state, unsigned long long next_state, myReal &wR, myReal &wI);

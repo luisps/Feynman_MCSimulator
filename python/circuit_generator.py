@@ -608,6 +608,24 @@ def get_circuit(ID, *args):
         qc = ran_gen (n, nCycles, measure=False, remove_pairs_H=True)
         layers, num_layers = QCircuit_to_layers (qc)
         return qc, qc.num_qubits, layers, num_layers
+    elif ID==600:   
+        num_qubits = args[0]
+        qc = QuantumCircuit(num_qubits)
+        #Layer 0
+        for i in range(num_qubits):
+            qc.h(i)
+        #Layer 1
+        for i in range(0, num_qubits, 2):
+            if i == (num_qubits-1):
+                continue
+            qc.cx(i, i+1)
+        #Layer 2
+        for i in range(1, num_qubits, 2):
+            target = i+1 if i < (num_qubits-1) else 0
+            qc.cx(i, target)
+        layers, num_layers = QCircuit_to_layers (qc)
+        return qc, qc.num_qubits, layers, num_layers
+
         
 ###################
 #

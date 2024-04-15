@@ -20,6 +20,7 @@
 #include "PreProcessorSettings.h"
 #include "path.h"
 #include "PathVertex.h"
+#include "CState.h"
 
 // For time stats
 // https://www.geeksforgeeks.org/measure-execution-time-function-cpp/
@@ -33,24 +34,23 @@ static std::condition_variable cv_m2s, cv_s2m;
 // Master to Slave
 static bool terminate = false;
 
-
 #ifdef NON_ZERO_PATHS
 static bool BD_paths_NOVEC_NOT (TCircuit *c,
-                unsigned long long init_state, unsigned long long final_state, const unsigned long long n_samples,
+                CState init_state, CState final_state, const unsigned long long n_samples,
                 myReal &sumR, myReal &sumI, unsigned long long& n_Paths, const bool MIS, int& non_zero_paths);
 static bool BD_paths_NOVEC_T (TCircuit *c,
-                unsigned long long init_state, unsigned long long final_state, unsigned long long& samples2proc, bool& taskReady, bool& resAvailable, myReal& T_sumR, myReal& T_sumI, unsigned long long& n_Paths, unsigned long long& processedSamples, const bool MIS, int& non_zero_paths);
+                CState init_state, CState final_state, unsigned long long& samples2proc, bool& taskReady, bool& resAvailable, myReal& T_sumR, myReal& T_sumI, unsigned long long& n_Paths, unsigned long long& processedSamples, const bool MIS, int& non_zero_paths);
 #else
 static bool BD_paths_NOVEC_NOT (TCircuit *c,
-                unsigned long long init_state, unsigned long long final_state, const unsigned long long n_samples,
+                CState init_state, CState final_state, const unsigned long long n_samples,
                 myReal &sumR, myReal &sumI, unsigned long long& n_Paths, const bool MIS);
 static bool BD_paths_NOVEC_T (TCircuit *c,
-                unsigned long long init_state, unsigned long long final_state, unsigned long long& samples2proc, bool& taskReady, bool& resAvailable, myReal& T_sumR, myReal& T_sumI, unsigned long long& n_Paths, unsigned long long& processedSamples, const bool MIS);
+                CState init_state, CState final_state, unsigned long long& samples2proc, bool& taskReady, bool& resAvailable, myReal& T_sumR, myReal& T_sumI, unsigned long long& n_Paths, unsigned long long& processedSamples, const bool MIS);
 #endif
 
 #ifdef NON_ZERO_PATHS
 static bool BD_paths_NOVEC_kernel (TCircuit *c,
-                unsigned long long init_state, unsigned long long final_state, const unsigned long long n_samples,
+                CState init_state, CState final_state, const unsigned long long n_samples,
                 myReal &sumR, myReal &sumI,
                 unsigned long long& n_Paths, const bool MIS,
                            pcg32& e,
@@ -58,43 +58,45 @@ static bool BD_paths_NOVEC_kernel (TCircuit *c,
                                    int& non_zero_paths);
 #else
     static bool BD_paths_NOVEC_kernel (TCircuit *c,
-                unsigned long long init_state, unsigned long long final_state, const unsigned long long n_samples,
+                CState init_state, CState final_state, const unsigned long long n_samples,
                 myReal &sumR, myReal &sumI,
                 unsigned long long& n_Paths, const bool MIS,
                            pcg32& e,
                                        std::uniform_real_distribution<myReal>& d);
 #endif
 
-static void _ForwardPath (TCircuit *c, unsigned long long init_state,
+static void _ForwardPath (TCircuit *c, CState init_state,
                           PathVertexVector& Fpath,
                            pcg32& e,
-                          std::uniform_real_distribution<myReal>& d);
+                          std::uniform_real_distribution<myReal>& d,
+                          CState * current_state, CState * next_state);
 
-static void _BackwardPath (TCircuit *c, unsigned long long final_state,
+static void _BackwardPath (TCircuit *c, CState final_state,
                               PathVertexVector& Bpath,
                            pcg32& e,
-                           std::uniform_real_distribution<myReal>& d);
+                           std::uniform_real_distribution<myReal>& d,
+                           CState * current_state, CState * next_state);
 
 static myReal _ConnectPath (TCircuitLayer* layer, const int l,
-                     unsigned long long currentState,
-                       PathVertexVector Fpath,
-                       unsigned long long nextState,
-                        PathVertexVector Bpath,
+                       PathVertexVector * __restrict__ Fpath,
+                        PathVertexVector * __restrict__ Bpath,
                        myReal& wR, myReal& wI);
 
 static myReal _ConnectPathMIS (TCircuitLayer* layer, const int l, const int num_layers,
-                            PathVertexVector Fpath,
-                            PathVertexVector Bpath, 
-                            myReal probBuffer[], myReal probFBuffer[],myReal probBBuffer[],
+                            PathVertexVector * __restrict__ Fpath,
+                            PathVertexVector * __restrict__ Bpath,
+                            myReal * __restrict__ probBuffer,
+                            myReal * __restrict__ probFBuffer,
+                            myReal * __restrict__ probBBuffer,
                             myReal& wR, myReal& wI);
 
 #ifdef CONVERGENCE_STATS
-bool BD_paths (TCircuit *c, unsigned long long init_state,
-                unsigned long long final_state, const unsigned long long n_samples,
+bool BD_paths (TCircuit *c, unsigned long long _init_state,
+               unsigned long long _final_state, const unsigned long long n_samples,
                myReal &estimateR, myReal &estimateI, std::vector<T_Stats>& stats, const int n_threads, const bool MIS) {
 #else
-bool BD_paths (TCircuit *c, unsigned long long init_state,
-                unsigned long long final_state, const unsigned long long n_samples,
+bool BD_paths (TCircuit *c, unsigned long long _init_state,
+               unsigned long long _final_state, const unsigned long long n_samples,
                 myReal &estimateR, myReal &estimateI, const int n_threads, const bool MIS) {
 #endif
 
@@ -105,6 +107,11 @@ bool BD_paths (TCircuit *c, unsigned long long init_state,
     myReal sumR=0.f, sumI=0.f;
     unsigned long long n_ProcessedSamples = 0ull;
     unsigned long long n_Paths = 0ull;
+    
+    // Convert states from unsigned long long to CState
+    // depending on whether it is CSTate_ULon or CState_VChar
+    //CState init_state(_init_state), final_state(_final_state);
+    CState init_state(c->size->num_qubits, _init_state), final_state(c->size->num_qubits, _final_state);
 
     
     if (n_threads<=1) {
@@ -209,7 +216,9 @@ bool BD_paths (TCircuit *c, unsigned long long init_state,
                     if (resAvailable[t]) {
                         sumR += T_sumR[t];  // retrieve results
                         sumI += T_sumI[t];  // retrieve results
+#ifdef NON_ZERO_PATHS
                         non_zero_paths += l_NzeroP[t];
+#endif
                         resAvailable[t] = false;  // results read
                         idleThreads[t] = true;  // this thread is now idle
                         n_ProcessedSamples += processedSamples[t];
@@ -313,13 +322,13 @@ bool BD_paths (TCircuit *c, unsigned long long init_state,
 
 #ifdef NON_ZERO_PATHS
 static bool BD_paths_NOVEC_NOT (TCircuit *c,
-                unsigned long long init_state, unsigned long long final_state, const unsigned long long n_samples,
+                CState init_state, CState final_state, const unsigned long long n_samples,
                               myReal &sumR, myReal &sumI,
                                 unsigned long long& n_Paths, const bool MIS,
                                 int& non_zero_paths) {
 #else
     static bool BD_paths_NOVEC_NOT (TCircuit *c,
-                    unsigned long long init_state, unsigned long long final_state, const unsigned long long n_samples,
+                    CState init_state, CState final_state, const unsigned long long n_samples,
                                   myReal &sumR, myReal &sumI,
                                     unsigned long long& n_Paths, const bool MIS) {
 #endif
@@ -339,12 +348,12 @@ static bool BD_paths_NOVEC_NOT (TCircuit *c,
 
 #ifdef NON_ZERO_PATHS
 static bool BD_paths_NOVEC_T (TCircuit *c,
-                unsigned long long init_state, unsigned long long final_state, unsigned long long& samples2proc, bool& taskReady, bool& resAvailable, myReal& T_sumR, myReal& T_sumI, unsigned long long& processedSamples,
+                CState init_state, CState final_state, unsigned long long& samples2proc, bool& taskReady, bool& resAvailable, myReal& T_sumR, myReal& T_sumI, unsigned long long& processedSamples,
                               unsigned long long& n_Paths, const bool MIS,
                               int& non_zero_paths) {
 #else
 static bool BD_paths_NOVEC_T (TCircuit *c,
-                unsigned long long init_state, unsigned long long final_state, unsigned long long& samples2proc, bool& taskReady, bool& resAvailable, myReal& T_sumR, myReal& T_sumI, unsigned long long& processedSamples,
+                CState init_state, CState final_state, unsigned long long& samples2proc, bool& taskReady, bool& resAvailable, myReal& T_sumR, myReal& T_sumI, unsigned long long& processedSamples,
                               unsigned long long& n_Paths, const bool MIS) {
 #endif
     
@@ -428,7 +437,7 @@ static bool BD_paths_NOVEC_T (TCircuit *c,
 
 #ifdef NON_ZERO_PATHS
 static bool BD_paths_NOVEC_kernel (TCircuit *c,
-                unsigned long long init_state, unsigned long long final_state, const unsigned long long n_samples,
+                CState init_state, CState final_state, const unsigned long long n_samples,
                 myReal &sumR, myReal &sumI,
                 unsigned long long& n_Paths, const bool MIS,
                 pcg32& e,
@@ -436,7 +445,7 @@ static bool BD_paths_NOVEC_kernel (TCircuit *c,
                                    int& non_zero_paths) {
 #else
 static bool BD_paths_NOVEC_kernel (TCircuit *c,
-                                    unsigned long long init_state, unsigned long long final_state,
+                                    CState init_state, CState final_state,
                                    const unsigned long long n_samples,
                                     myReal &sumR, myReal &sumI,
                                    unsigned long long& n_Paths, const bool MIS,
@@ -446,6 +455,7 @@ static bool BD_paths_NOVEC_kernel (TCircuit *c,
     unsigned long long s;   // sample counter
     int l;                  // layer counter
     unsigned long long l_n_Paths = 0ull;   // nbr of paths (local counter)
+    
 
     myReal l_sumR=0.f, l_sumI=0.f;  // local summ accumulators for performance reasons
 #ifdef NON_ZERO_PATHS
@@ -454,11 +464,21 @@ static bool BD_paths_NOVEC_kernel (TCircuit *c,
     
     const int L = c->size->num_layers;   // number of layers in the circuit
     
+    // create CState variables to hold current_state and next_state
+    // and Fpath and Bpath
+    // thus avoiding creating them every sample
     PathVertexVector Fpath(L), Bpath(L+1);
+    for (l=0 ; l<L ; l++) {
+        Fpath.data[l].state = new CState(c->size->num_qubits);
+        Bpath.data[l].state = new CState(c->size->num_qubits);
+    }
+    Bpath.data[L].state = new CState(c->size->num_qubits);
+    CState current_state(c->size->num_qubits), next_state(c->size->num_qubits);
+
     myReal *ProbBuffer = new myReal[L];
     myReal *ProbFBuffer = new myReal[L];
     myReal *ProbBBuffer = new myReal[L];
-
+    
     // iteratively generate samples
     for (s=0ull; s<n_samples ; s++) {
         
@@ -467,18 +487,19 @@ static bool BD_paths_NOVEC_kernel (TCircuit *c,
 #endif
         
         Fpath.clear();
-        _ForwardPath (c, init_state, Fpath, e, d);
+        _ForwardPath (c, init_state, Fpath, e, d, &current_state, &next_state);
 
 #ifdef DEBUG
-/*        //print_path(Fpath);
-        fprintf (stderr, "\n\t\tFORWARD\n\n ");
-        fprintf (stderr, "%llu ", Fpath[0]);
+        //print_path(Fpath);
+        fprintf (stderr, "\n\t\tFORWARD\n\n");
+        //fprintf (stderr, "%llu ", Fpath[0]);
+        Fpath.data[0].state->info();
         for (l=1 ; l< L ; l++) {
-            fprintf (stderr, "-> %llu ", Fpath[l]);
+            Fpath.data[l].state->info();
         }
         fprintf (stderr, "||\n");
         fprintf (stderr, "\n");
-        fprintf (stderr, "%.5f + i %.5f ", Fpath_wR[0], Fpath_wI[0]);
+        /*fprintf (stderr, "%.5f + i %.5f ", Fpath_wR[0], Fpath_wI[0]);
         for (l=1 ; l< L ; l++) {
             fprintf (stderr, "-> %.5f + i %.5f ", Fpath_wR[l], Fpath_wI[l]);
         }
@@ -491,18 +512,19 @@ static bool BD_paths_NOVEC_kernel (TCircuit *c,
         §fprintf (stderr, "||\n"); */
 #endif
         Bpath.clear();
-        _BackwardPath (c, final_state, Bpath, e, d);
+        _BackwardPath (c, final_state, Bpath, e, d, &current_state, &next_state);
 
 #ifdef DEBUG
         //print_path(Bpath);
-       /* fprintf (stderr, "\n\t\tBACKWARD\n\n ");
-        fprintf (stderr, "||\t%llu ", Bpath[1]);
+        fprintf (stderr, "\n\t\tBACKWARD\n\n");
+        //fprintf (stderr, "||\t%llu ", Bpath[1]);
+        Bpath.data[1].state->info();
         for (l=2 ; l<= L ; l++) {
-            fprintf (stderr, "<- %llu ", Bpath[l]);
+            Bpath.data[l].state->info();
         }
         fprintf (stderr, "\n");
         fprintf (stderr, "\n");
-        fprintf (stderr, "||\t%.5f + i %.5f ", Bpath_wR[1], Bpath_wI[1]);
+        /*fprintf (stderr, "||\t%.5f + i %.5f ", Bpath_wR[1], Bpath_wI[1]);
         for (l=2 ; l<= L ; l++) {
             fprintf (stderr, "<- %.5f + i %.5f ", Bpath_wR[l], Bpath_wI[l]);
         }
@@ -519,8 +541,6 @@ static bool BD_paths_NOVEC_kernel (TCircuit *c,
         for (l=0 ; l < L ; l++ ) {  // generate all L different paths
             myReal prob, wR, wI;
             TCircuitLayer *layer = &c->layers[l];
-            const unsigned long long currentState = Fpath.data[l].state;
-            const unsigned long long nextState = Bpath.data[l+1].state;
 
 #ifdef DEBUG
 /*            fprintf (stderr, "Connect state %llu to state %llu through layer %d:\n", currentState, nextState, l);
@@ -538,7 +558,7 @@ static bool BD_paths_NOVEC_kernel (TCircuit *c,
             if (MIS) {
                 // connect deterministically fPath to bPath through layer l using MIS
                 prob = _ConnectPathMIS (layer, l, L,
-                                     Fpath, Bpath, ProbBuffer, ProbFBuffer, ProbBBuffer,
+                                     &Fpath, &Bpath, ProbBuffer, ProbFBuffer, ProbBBuffer,
                                             wR, wI);
                 
                 // prob is in fact the reciprocal of the MIS weight.
@@ -546,8 +566,7 @@ static bool BD_paths_NOVEC_kernel (TCircuit *c,
             else {
                 // connect deterministically fPath to bPath through layer l
                 prob = _ConnectPath (layer, l,
-                                 currentState, Fpath,
-                                 nextState, Bpath,
+                                 &Fpath, &Bpath,
                                  wR, wI);
             }
 #ifdef DEBUG
@@ -559,7 +578,9 @@ static bool BD_paths_NOVEC_kernel (TCircuit *c,
                 l_sumR += path_throughputR;
                 l_sumI += path_throughputI;
 #ifdef NON_ZERO_PATHS
-                //fprintf (stderr, "\tw = %e + i %e \t prob = %e\n", wR, wI, prob);
+                /*fprintf (stderr, "**\tw = %e + i %e \tprob = %e\n", wR, wI, prob);
+                fprintf (stderr, "\tp_throughput = %e + i %e \n\tlsum = %e + i %e \n", path_throughputR, path_throughputI, l_sumR, l_sumI);
+                fprintf (stderr, "\test = %e + i %e \n", l_sumR/(((myReal)l_n_Paths)+1.), l_sumI/(((myReal)l_n_Paths)+1.));*/
                 l_non_zero_paths++;
 #endif
             }
@@ -577,24 +598,24 @@ static bool BD_paths_NOVEC_kernel (TCircuit *c,
     return true;
 }
     
-static void _ForwardPath (TCircuit *c, unsigned long long init_state,
+static void _ForwardPath (TCircuit *c, CState init_state,
                           PathVertexVector& Fpath,
                           pcg32& e,
-                          std::uniform_real_distribution<myReal>& d) {
-        
-        
-    unsigned long long current_state, next_state;
+                          std::uniform_real_distribution<myReal>& d,
+                          CState * current_state, CState * next_state) {
+                
+    CState * swap_aux;
     int ndx;
     ndx = Fpath.append();
     // The forward path 1st node is the initial state
-    Fpath.data[ndx].state = init_state;
+    *Fpath.data[ndx].state = init_state;
     Fpath.data[ndx].wR = 1.0;
     Fpath.data[ndx].wI = 0.0;
     Fpath.data[ndx].PwR = 1.0;
     Fpath.data[ndx].PwI = 0.0;
     Fpath.data[ndx].prob = 1.0;
     Fpath.data[ndx].Pprob = 1.0;
-    current_state = init_state;
+    *current_state = init_state;
         
         // Evolve through all gates' layes (starting at 0) , except the last one
         // The last layer will be later on deterministically connected to the final state
@@ -604,11 +625,12 @@ static void _ForwardPath (TCircuit *c, unsigned long long init_state,
             TCircuitLayer *layer = &(c->layers[l]);
             
             // sample this layer
+            next_state->reset_data();
             l_prob = layer_sample(layer, l, current_state, next_state, l_wR, l_wI, e, d);
             
             // add to Fpath
             ndx = Fpath.append();
-            Fpath.data[ndx].state = next_state;
+            *Fpath.data[ndx].state = *next_state;
             Fpath.data[ndx].wR = l_wR;
             Fpath.data[ndx].wI = l_wI;
             complex_multiply (auxR, auxI, Fpath.data[ndx-1].PwR, Fpath.data[ndx-1].PwI, l_wR, l_wI);
@@ -617,22 +639,27 @@ static void _ForwardPath (TCircuit *c, unsigned long long init_state,
             Fpath.data[ndx].prob = l_prob;
             Fpath.data[ndx].Pprob = Fpath.data[ndx-1].Pprob * l_prob;
 
+            // Let current state = next state
+            // and swap storage areas
+            swap_aux = current_state;
             current_state = next_state;
+            next_state = swap_aux;
         }
         return;
     }
 
     
-static void _BackwardPath (TCircuit *c, unsigned long long final_state,
+static void _BackwardPath (TCircuit *c, CState final_state,
                             PathVertexVector& Bpath,
                            pcg32& e,
-                           std::uniform_real_distribution<myReal>& d) {
+                           std::uniform_real_distribution<myReal>& d,
+                           CState * current_state, CState * next_state) {
         
-    unsigned long long current_state, next_state;
+    CState * swap_aux;
     int ndx;
     // The backward path 1st node is the final state: to revert later
     ndx = Bpath.prepend();
-    Bpath.data[ndx].state = final_state;
+    *Bpath.data[ndx].state = final_state;
     Bpath.data[ndx].wR = 1.0;
     Bpath.data[ndx].wI = 0.0;
     Bpath.data[ndx].PwR = 1.0;
@@ -640,7 +667,7 @@ static void _BackwardPath (TCircuit *c, unsigned long long final_state,
     Bpath.data[ndx].prob= 1.0;
     Bpath.data[ndx].Pprob = 1.0;
         
-    current_state = final_state;
+    *current_state = final_state;
         
     // Evolve through all gates' layes (starting at the last one (num_lkayers-1)) , except the first one
     // The first layer will be later on deterministically connected to the initial state
@@ -650,11 +677,12 @@ static void _BackwardPath (TCircuit *c, unsigned long long final_state,
         TCircuitLayer *layer = &(c->layers[l]);
             
         // sample this layer
+        next_state->reset_data();
         l_prob = layer_sample(layer, l, current_state, next_state, l_wR, l_wI, e, d, false);
             
         // add to Bpath
         ndx = Bpath.prepend();
-        Bpath.data[ndx].state = next_state;
+        *Bpath.data[ndx].state = *next_state;
         Bpath.data[ndx].wR = l_wR;
         Bpath.data[ndx].wI = l_wI;
         complex_multiply (auxR, auxI, Bpath.data[ndx+1].PwR, Bpath.data[ndx+1].PwI, l_wR, l_wI);
@@ -663,11 +691,15 @@ static void _BackwardPath (TCircuit *c, unsigned long long final_state,
         Bpath.data[ndx].prob= l_prob;
         Bpath.data[ndx].Pprob = Bpath.data[ndx+1].Pprob * l_prob;
             
+        // Let current state = next state
+        // and swap storage areas
+        swap_aux = current_state;
         current_state = next_state;
+        next_state = swap_aux;
     }
     // to make sure that the element index [0] on the backward path means nothing add 0. to the vectors
     ndx = Bpath.prepend();
-    Bpath.data[ndx].state = 0ull;
+    Bpath.data[ndx].state->reset_data();
     Bpath.data[ndx].wR = 0.0;
     Bpath.data[ndx].wI = 0.0;
     Bpath.data[ndx].PwR = 0.0;
@@ -679,17 +711,14 @@ static void _BackwardPath (TCircuit *c, unsigned long long final_state,
 }
     
 static myReal _ConnectPathMIS (TCircuitLayer* layer, const int l, const int L,
-                                PathVertexVector Fpath,
-                                PathVertexVector Bpath,
-                                myReal prob_Buffer[],myReal probFor_Buffer[],myReal probBack_Buffer[],
+                                PathVertexVector * __restrict__ Fpath,
+                                PathVertexVector * __restrict__ Bpath,
+                                myReal * __restrict__ prob_Buffer,myReal * __restrict__ probFor_Buffer, myReal * __restrict__ probBack_Buffer,
                                 myReal& wR, myReal& wI) {
     myReal lwR, lwI;
-    unsigned long long currentState, nextState;
     int i;
             
-    currentState = Fpath.data[l].state;
-    nextState = Bpath.data[l+1].state;
-    const myReal prob = layer_w_prob (layer, l, currentState, nextState, lwR, lwI);
+    const myReal prob = layer_w_prob (layer, l, Fpath->data[l].state, Bpath->data[l+1].state, lwR, lwI);
             
     #ifdef DEBUG
         /*fprintf (stderr, "\nCONNECT_MIS\n");
@@ -701,8 +730,8 @@ static myReal _ConnectPathMIS (TCircuitLayer* layer, const int l, const int L,
             
             
     // compute path w
-    complex_multiply(lwR, lwI, lwR, lwI, Fpath.data[l].PwR, Fpath.data[l].PwI);
-    complex_multiply(lwR, lwI, lwR, lwI, Bpath.data[l+1].PwR, Bpath.data[l+1].PwI);
+    complex_multiply(lwR, lwI, lwR, lwI, Fpath->data[l].PwR, Fpath->data[l].PwI);
+    complex_multiply(lwR, lwI, lwR, lwI, Bpath->data[l+1].PwR, Bpath->data[l+1].PwI);
             
     if (complex_abs_square(lwR, lwI) <=0 || prob <= 0) { // terminate path
         wR = 0.f;
@@ -713,11 +742,11 @@ static myReal _ConnectPathMIS (TCircuitLayer* layer, const int l, const int L,
     // store each path segment prob as if it had been generated stochastically
     // i.e. without a det connection at layer l
     for (i=1 ; i<=l ; i++) {
-        prob_Buffer[i-1] = Fpath.data[i].prob;
+        prob_Buffer[i-1] = Fpath->data[i].prob;
     }
     prob_Buffer[l] = prob;
     for (i=l+1 ; i<L ; i++) {
-        prob_Buffer[i] = Bpath.data[i].prob;
+        prob_Buffer[i] = Bpath->data[i].prob;
     }
 
     // compute forward and backward products
@@ -744,7 +773,7 @@ static myReal _ConnectPathMIS (TCircuitLayer* layer, const int l, const int L,
         MIS_weight_reciprocal += path_prob;
 
         #ifdef DEBUG
-            fprintf (stderr, "(l=%d) Det connection layer %d : NEW Path prob = %e \n", det_connect,path_prob);
+            fprintf (stderr, "(l=%d) Det connection layer %d : NEW Path prob = %e \n", l, det_connect,path_prob);
             #endif
     }
 
@@ -765,14 +794,12 @@ static myReal _ConnectPathMIS (TCircuitLayer* layer, const int l, const int L,
 
 
 static myReal _ConnectPath (TCircuitLayer* layer, const int l,
-                        unsigned long long currentState,
-                        PathVertexVector Fpath,
-                        unsigned long long nextState,
-                        PathVertexVector Bpath,
+                        PathVertexVector * __restrict__ Fpath,
+                        PathVertexVector * __restrict__ Bpath,
                         myReal& wR, myReal& wI) {
         
     myReal lwR, lwI, prob;
-    layer_w(layer, l, currentState, nextState, lwR, lwI);
+    layer_w(layer, l, Fpath->data[l].state, Bpath->data[l+1].state, lwR, lwI);
     #ifdef DEBUG
         /*fprintf (stderr, "\nCONNECT\n");
         fprintf (stderr, "Fsegment Pw = %.5f + i %.5f\n", Fpath_PwR, Fpath_PwI);
@@ -780,11 +807,11 @@ static myReal _ConnectPath (TCircuitLayer* layer, const int l,
         fprintf (stderr, "Bsegment Pw = %.5f + i %.5f\n", Bpath_PwR, Bpath_PwI); */
     #endif
     // layer_weight = Fpath_Pw * (layer_weight * Bpath_Pw)
-    complex_multiply(lwR, lwI, lwR, lwI, Bpath.data[l+1].PwR, Bpath.data[l+1].PwI);
-    complex_multiply(lwR, lwI, lwR, lwI, Fpath.data[l].PwR, Fpath.data[l].PwI);
+    complex_multiply(lwR, lwI, lwR, lwI, Bpath->data[l+1].PwR, Bpath->data[l+1].PwI);
+    complex_multiply(lwR, lwI, lwR, lwI, Fpath->data[l].PwR, Fpath->data[l].PwI);
 
     // prob = Fpath_Pprob * 1.0 * Bpath_Pprob
-    prob = Fpath.data[l].Pprob * Bpath.data[l+1].Pprob;
+    prob = Fpath->data[l].Pprob * Bpath->data[l+1].Pprob;
     wR = lwR;
     wI = lwI;
 

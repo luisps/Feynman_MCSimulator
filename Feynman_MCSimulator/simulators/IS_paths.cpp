@@ -197,7 +197,9 @@ bool IS_paths (TCircuit *c, unsigned long long init_state,
                     if (resAvailable[t]) {
                         sumR += T_sumR[t];  // retrieve results
                         sumI += T_sumI[t];  // retrieve results
+#ifdef NON_ZERO_PATHS
                         non_zero_paths += l_NzeroP[t];
+#endif
                         resAvailable[t] = false;  // results read
                         idleThreads[t] = true;  // this thread is now idle
                         n_ProcessedSamples += processedSamples[t];

@@ -43,7 +43,8 @@ inline void gate_id_w (int i_qb, int o_qb, myReal &wR, myReal &wI) {
     wI = 0.f;
 }
  
-inline myReal gate_id_sample (int i_qb, const myReal rnd, int& o_qb, myReal &wR, myReal &wI) {
+//inline myReal gate_id_sample (int i_qb, const myReal rnd, int& o_qb, myReal &wR, myReal &wI) {
+inline myReal gate_id_sample (int i_qb, int& o_qb, myReal &wR, myReal &wI) {
     o_qb = i_qb;
     wR = 1.f;
     wI = 0.f;
@@ -67,7 +68,8 @@ inline void gate_x_w (int i_qb, int o_qb, myReal &wR, myReal &wI) {
     wI = 0.f;
 }
 
-inline myReal gate_x_sample (int i_qb, const myReal rnd, int& o_qb, myReal &wR, myReal &wI) {
+//inline myReal gate_x_sample (int i_qb, const myReal rnd, int& o_qb, myReal &wR, myReal &wI) {
+inline myReal gate_x_sample (int i_qb, int& o_qb, myReal &wR, myReal &wI) {
     o_qb = 1 - i_qb;
     wR = 1.f;
     wI = 0.f;
@@ -79,14 +81,16 @@ inline void gate_y_w (int i_qb, int o_qb, myReal &wR, myReal &wI) {
     wR = 0.f;
 }
 
-inline myReal gate_y_sample (int i_qb, const myReal rnd, int& o_qb, myReal &wR, myReal &wI) {
+//inline myReal gate_y_sample (int i_qb, const myReal rnd, int& o_qb, myReal &wR, myReal &wI) {
+inline myReal gate_y_sample (int i_qb, int& o_qb, myReal &wR, myReal &wI) {
     o_qb = 1 - i_qb;
     wI = (i_qb == 0 ? 1.f : -1.f );
     wR = 0.f;
     return 1.f;
 }
 
-inline myReal gate_y_sample_back (int i_qb, const myReal rnd, int& o_qb, myReal &wR, myReal &wI) {
+//inline myReal gate_y_sample_back (int i_qb, const myReal rnd, int& o_qb, myReal &wR, myReal &wI) {
+inline myReal gate_y_sample_back (int i_qb, int& o_qb, myReal &wR, myReal &wI) {
     o_qb = 1 - i_qb;
     wI = (i_qb == 0 ? -1.f : 1.f );
     wR = 0.f;
@@ -99,7 +103,8 @@ inline void gate_z_w (int i_qb, int o_qb, myReal &wR, myReal &wI) {
     wI = 0.f;
 }
 
-inline myReal gate_z_sample (int i_qb, const myReal rnd, int& o_qb, myReal &wR, myReal &wI) {
+//inline myReal gate_z_sample (int i_qb, const myReal rnd, int& o_qb, myReal &wR, myReal &wI) {
+inline myReal gate_z_sample (int i_qb, int& o_qb, myReal &wR, myReal &wI) {
     o_qb = i_qb;
     wR = (i_qb == 0 ? 1.f : -1.f );
     wI = 0.f;
@@ -111,7 +116,8 @@ inline void gate_s_w (int i_qb, int o_qb, myReal &wR, myReal &wI) {
     wI = ((i_qb == 1) && (o_qb==1)  ? 1.f : 0.f );
 }
 
-inline myReal gate_s_sample (int i_qb, const myReal rnd, int& o_qb, myReal &wR, myReal &wI) {
+//inline myReal gate_s_sample (int i_qb, const myReal rnd, int& o_qb, myReal &wR, myReal &wI) {
+inline myReal gate_s_sample (int i_qb, int& o_qb, myReal &wR, myReal &wI) {
     o_qb = i_qb;
     wR = (i_qb == 0  ? 1.f : 0.f );
     wI = (i_qb == 1  ? 1.f : 0.f );
@@ -123,7 +129,8 @@ inline void gate_t_w (int i_qb, int o_qb, myReal &wR, myReal &wI) {
     wI = ((i_qb == o_qb)  ? (i_qb == 0 ? 0.f : M_SQRT2_OVER_2) : 0.f );
 }
 
-inline myReal gate_t_sample (int i_qb, const myReal rnd, int& o_qb, myReal &wR, myReal &wI) {
+//inline myReal gate_t_sample (int i_qb, const myReal rnd, int& o_qb, myReal &wR, myReal &wI) {
+inline myReal gate_t_sample (int i_qb, int& o_qb, myReal &wR, myReal &wI) {
     o_qb = i_qb;
     wR = (i_qb == 0 ? 1.f : M_SQRT2_OVER_2);
     wI = (i_qb == 0 ? 0.f : M_SQRT2_OVER_2);
@@ -169,7 +176,8 @@ inline void gate_id2_w (int i_qbs, int o_qbs, myReal &wR, myReal &wI) {
     wI = 0.f;
 }
 
-inline myReal gate_id2_sample (int i_qbs, const myReal rnd, int& o_qbs, myReal &wR, myReal &wI) {
+//inline myReal gate_id2_sample (int i_qbs, const myReal rnd, int& o_qbs, myReal &wR, myReal &wI) {
+inline myReal gate_id2_sample (int i_qbs, int& o_qbs, myReal &wR, myReal &wI) {
     o_qbs = i_qbs;
     wR = 1.f;
     wI = 0.f;
@@ -181,7 +189,8 @@ inline void gate_cx_w (int i_qbs, int o_qbs, myReal &wR, myReal &wI) {
     wI = 0.f;
 }
 
-inline myReal gate_cx_sample (int i_qbs, const myReal rnd, int& o_qbs, myReal &wR, myReal &wI) {
+//inline myReal gate_cx_sample (int i_qbs, const myReal rnd, int& o_qbs, myReal &wR, myReal &wI) {
+inline myReal gate_cx_sample (int i_qbs, int& o_qbs, myReal &wR, myReal &wI) {
     o_qbs = (i_qbs<2  ? i_qbs : (i_qbs==2 ? 3 : 2));
     wR = 1.f;
     wI = 0.f;
@@ -193,7 +202,8 @@ inline void gate_cz_w (int i_qbs, int o_qbs, myReal &wR, myReal &wI) {
     wI = 0.f;
 }
 
-inline myReal gate_cz_sample (int i_qbs, const myReal rnd, int& o_qbs, myReal &wR, myReal &wI) {
+//inline myReal gate_cz_sample (int i_qbs, const myReal rnd, int& o_qbs, myReal &wR, myReal &wI) {
+inline myReal gate_cz_sample (int i_qbs, int& o_qbs, myReal &wR, myReal &wI) {
     o_qbs = i_qbs;
     wR = (i_qbs==3 ? -1.f : 1.f);
     wI = 0.f;
@@ -225,19 +235,21 @@ inline myReal gate_g2p1_sample (int i_qbs, const myReal rnd, int& o_qbs, myReal 
 /* qubit handling functions for unsigned long long states */
 
 inline int qb_value (unsigned long long qb, unsigned long long state) {
-    const unsigned long long uvalue = 1ull <<qb;
-    return ((state & uvalue) >> qb);
+    //const unsigned long long uvalue = 1ull <<qb;
+    //return ((state & uvalue) >> qb);
+    return (state >> qb) & 1;
 }
 
 inline unsigned long long qb_set (int qb, unsigned long long state) {
-    const unsigned long long uvalue = (1ull <<qb);
-    return (state | uvalue);
+    //const unsigned long long uvalue = (1ull <<qb);
+    //return (state | uvalue);
+    return (state | (1<<qb));
     
 }
 
 inline unsigned long long qb_reset (int qb, unsigned long long state) {
-    const unsigned long long uvalue = ~(1ull <<qb);
-    return state & uvalue;
+    //const unsigned long long uvalue = ~(1ull <<qb);
+    return (state & ~(1 <<qb));
     
 }
 

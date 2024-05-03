@@ -175,7 +175,7 @@ int main(int argc, const char * argv[]) {
                 // Note: Can also use index of column with [] operator
                 CSV_X = (unsigned long)(row["psi0"].get<unsigned long long>());
                 CCSV_X = (CState) CSV_X;
-                if (CSV_X==init_state) {
+                if (CCSV_X==init_state) {
                     true_a_R = row[to_string(my_final_state)+"r"].get<float>();
                     true_a_I = row[to_string(my_final_state)+"i"].get<float>();
                     CSV_found = true;

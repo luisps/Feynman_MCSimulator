@@ -49,6 +49,25 @@ enum TAlgorithms {
     BD_MIS=4
 } ;
 
+static void output_greetings () {
+	fprintf (stdout, "\n** Monte Carlo Feynman simulator LPS@2024\n\n");
+#ifdef __FLOAT_MP__
+	fprintf (stdout, "** \tfloats AS GNU MP class_mpf\n");
+#elif defined(__FLOAT_AS_DOUBLE__)
+	fprintf (stdout, "** \tfloats AS double\n");
+#else
+	fprintf (stdout, "** \tfloats AS float\n");
+#endif
+#ifdef __CSTATE_MP__
+	fprintf (stdout, "** \tstates AS GNU MP class_mpz\n");
+#elif defined(__CSTATE_VCHAR__)
+	fprintf (stdout, "** \tstates AS CState_VChar\n");
+#else
+	fprintf (stdout, "** \tstates AS unsigned long long\n");
+#endif
+	fprintf (stdout, "**\n******** \n\n");
+}
+
 #ifdef CONVERGENCE_STATS
 static void save_stats (std::vector<T_Stats>, bool, myReal, myReal, TAlgorithms );
 #endif
@@ -61,6 +80,8 @@ int main(int argc, const char * argv[]) {
     std::vector<T_Stats> stats;
 #endif
     
+    output_greetings ();
+
     if (!check_command_line (argc, argv)) return 1;
     
     printf("Filename = %s\n", fileName);
@@ -431,11 +452,17 @@ static void save_stats (std::vector<T_Stats> stats, bool true_exists, myReal tru
             snprintf(alg_str, 16, "UKNOWN");
             break;
     }
-#if defined(__CSTATE_MP__) || defined(__CSTATE_VCHAR__)
+#if defined(__CSTATE_MP__) 
     if (strlen(run_label)>0) {  // run label exists
         gmp_snprintf (csv_stats_fileName, 1024, "%s_stats_%s_%Zd_%Zd_%d_%d_%s.csv", fileName, alg_str, init_state.get_mpz_t(), final_state.get_mpz_t(), samples_exp2, n_threads, run_label);
     } else {
         gmp_snprintf (csv_stats_fileName, 1024, "%s_stats_%s_%Zd_%Zd_%d_%d.csv", fileName, alg_str, init_state.get_mpz_t(), final_state.get_mpz_t(), samples_exp2, n_threads);
+    }
+#elif defined(__CSTATE_VCHAR__)
+    if (strlen(run_label)>0) {  // run label exists
+        snprintf (csv_stats_fileName, 1024, "%s_stats_%s_%llu_%llu_%d_%d_%s.csv", fileName, alg_str, init_state.get_ull(), final_state.get_ull(), samples_exp2, n_threads, run_label);
+    } else {
+        snprintf (csv_stats_fileName, 1024, "%s_stats_%s_%Zd_%Zd_%d_%d.csv", fileName, alg_str, init_state.get_ull(), final_state.get_ull(), samples_exp2, n_threads);
     }
 #else
     if (strlen(run_label)>0) {  // run label exists

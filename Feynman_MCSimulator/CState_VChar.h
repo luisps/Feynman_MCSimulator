@@ -10,7 +10,7 @@
 
 class CState_VChar {
 private:
-    static int const NQB=512;
+    static int const NQB=1024;
     unsigned char mynumber[NQB];
     void set_data ( unsigned long long val) {
         for (int i=0 ; i< NQB ; i++) {
@@ -88,14 +88,14 @@ public:
         fprintf (stderr,")\n");
     }
     // for support of gmp_printf of the GNU MP library (there is a bug...)
-    mpz_ptr get_mpz_t() const {
+    /*mpz_ptr get_mpz_t() const {
         mpz_class aux = mynumber[NQB-1];
         for (int qb=NQB-2 ; qb >= 0 ; qb--) {
             aux = aux << 1;
             aux += mynumber[qb];
         }
         return aux.get_mpz_t();
-    }
+    }*/
     // for support of gmp_printf of the GNU MP library
     unsigned long get_ui() const {
         unsigned long aux = mynumber[NQB-1];

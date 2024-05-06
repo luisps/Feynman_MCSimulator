@@ -65,6 +65,9 @@ typedef struct T_Stats_s {
     SampleCounter n_Paths;
     myReal sumR, sumI;
     long long time_us;
+#ifdef NON_ZERO_PATHS
+    SampleCounter n_nonZero_paths;
+#endif
 } T_Stats;
 #endif
 

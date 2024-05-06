@@ -462,7 +462,7 @@ static void save_stats (std::vector<T_Stats> stats, bool true_exists, myReal tru
     if (strlen(run_label)>0) {  // run label exists
         snprintf (csv_stats_fileName, 1024, "%s_stats_%s_%llu_%llu_%d_%d_%s.csv", fileName, alg_str, init_state.get_ull(), final_state.get_ull(), samples_exp2, n_threads, run_label);
     } else {
-        snprintf (csv_stats_fileName, 1024, "%s_stats_%s_%Zd_%Zd_%d_%d.csv", fileName, alg_str, init_state.get_ull(), final_state.get_ull(), samples_exp2, n_threads);
+        snprintf (csv_stats_fileName, 1024, "%s_stats_%s_%llu_%llu_%d_%d.csv", fileName, alg_str, init_state.get_ull(), final_state.get_ull(), samples_exp2, n_threads);
     }
 #else
     if (strlen(run_label)>0) {  // run label exists
@@ -480,35 +480,47 @@ static void save_stats (std::vector<T_Stats> stats, bool true_exists, myReal tru
 #else
         fprintf (f, "trueR , trueI\n%f , %f\n", trueR, trueI);
 #endif
-        fprintf (f, "n_samples , time, n_paths , estimateR , estimateI, varianceR, varianceI\n");
-    } else
-        fprintf (f, "n_samples , time, n_paths , estimateR , estimateI\n");
+    }
+    fprintf (f, "n_samples , time, n_paths , ");
+#ifdef NON_ZERO_PATHS
+    fprintf (f, "n_NZero_paths , ");
+#endif
+    fprintf (f, "estimateR , estimateI");
+    if (true_exists) {
+        fprintf (f, " , varianceR , varianceI");
+    }
+    fprintf (f, "\n");
 
     for (auto & stat : stats) {
-        // compute running estimate
-        {
-            double const dn_Paths = (double)stat.n_Paths;
-            stat_estimateR = stat.sumR / dn_Paths;
-            stat_estimateI = stat.sumI / dn_Paths;
-        }
+        double const dn_Paths = (double)stat.n_Paths;
+        stat_estimateR = stat.sumR / dn_Paths;
+        stat_estimateI = stat.sumI / dn_Paths;
+        // keep in mind that variance is the sum of the real and complex variances
+        // we are storing both terms separated here to allow for posterior processing
+#ifdef __FLOAT_MP__
+        gmp_fprintf (f, "%llu , %lld , %llu , ", stat.n_samples, stat.time_us, stat.n_Paths);
+#ifdef NON_ZERO_PATHS
+        gmp_fprintf (f, "%llu , ", stat.n_nonZero_paths );
+#endif
+        gmp_fprintf (f, "%Ff , %Ff", stat_estimateR.get_mpf_t(), stat_estimateI.get_mpf_t());
+#else
+        fprintf (f, "%llu , %lld , %llu , ", stat.n_samples, stat.time_us, stat.n_Paths);
+#ifdef NON_ZERO_PATHS
+        fprintf (f, "%llu , ", stat.n_nonZero_paths );
+#endif
+        fprintf (f, "%f , %f", stat_estimateR, stat_estimateI);
+#endif
+
         if (true_exists) {
             varR = (stat_estimateR-trueR)*(stat_estimateR-trueR);
             varI = (stat_estimateI-trueI)*(stat_estimateI-trueI);
-            // keep in mind that variance is the sum of the real and complex variances
-            // we are storing both terms separated here to allow for posterior processing
 #ifdef __FLOAT_MP__
-            gmp_fprintf (f, "%llu , %lld , %llu , %Ff , %Ff, %Ff, %Ff\n", stat.n_samples, stat.time_us, stat.n_Paths, stat_estimateR.get_mpf_t(), stat_estimateI.get_mpf_t(), varR.get_mpf_t(), varI.get_mpf_t());
+            gmp_fprintf (f, " , %Ff , %Ff", varR.get_mpf_t(), varI.get_mpf_t());
 #else
-            fprintf (f, "%llu , %lld , %llu , %f , %f, %f, %f\n", stat.n_samples, stat.time_us, stat.n_Paths, stat_estimateR, stat_estimateI, varR, varI);
+            fprintf (f, " , %f , %f", varR, varI);
 #endif
         }
-        else {
-#ifdef __FLOAT_MP__
-            gmp_fprintf (f, "%llu , %lld , %llu , %Ff , %Ff\n", stat.n_samples, stat.time_us, stat.n_Paths, stat_estimateR.get_mpf_t(), stat_estimateI.get_mpf_t());
-#else
-            fprintf (f, "%llu , %lld , %llu , %f , %f\n", stat.n_samples, stat.time_us, stat.n_Paths, stat_estimateR, stat_estimateI);
-#endif
-        }
+        fprintf (f, "\n");
     }
     fclose (f);
 }

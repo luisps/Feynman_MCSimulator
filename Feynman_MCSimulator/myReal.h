@@ -8,7 +8,7 @@
 #ifndef myReal_h
 #define myReal_h
 
-#define __FLOAT_MP__
+//#define __FLOAT_MP__
 
 #ifdef __FLOAT_MP__
 

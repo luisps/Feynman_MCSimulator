@@ -211,7 +211,9 @@ bool BD_paths (TCircuit *c, CState init_state,
                     if (resAvailable[t]) {
                         sumR += T_sumR[t];  // retrieve results
                         sumI += T_sumI[t];  // retrieve results
+#ifdef NON_ZERO_PATHS
                         non_zero_paths += l_NzeroP[t];
+#endif
                         resAvailable[t] = false;  // results read
                         idleThreads[t] = true;  // this thread is now idle
                         n_ProcessedSamples += processedSamples[t];
@@ -223,6 +225,9 @@ bool BD_paths (TCircuit *c, CState init_state,
                         stat.sumI = sumI;
                         stat.n_samples = n_ProcessedSamples;
                         stat.n_Paths = n_Paths;
+#ifdef NON_ZERO_PATHS
+                        stat.n_nonZero_paths = non_zero_paths;
+#endif
                         // https://www.geeksforgeeks.org/measure-execution-time-function-cpp/
                         auto time_now = high_resolution_clock::now();
                         auto duration = duration_cast<microseconds>(time_now - time_start);

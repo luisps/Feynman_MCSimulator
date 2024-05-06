@@ -10,7 +10,7 @@
 
 class CState_VChar {
 private:
-    static int const NQB=1024;
+    static int const NQB=4096;
     unsigned char mynumber[NQB];
     void set_data ( unsigned long long val) {
         for (int i=0 ; i< NQB ; i++) {

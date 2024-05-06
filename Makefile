@@ -1,13 +1,15 @@
 CXX      := g++
 CXXFLAGS := -pthread -O3
-# FLOATFLAG:= -D __FLOAT_AS_DOUBLE__
-LDFLAGS  := 
+# REPR_FLAGS:= -D __FLOAT_MP__ -D __CSTATE_VCHAR__
+# REPR_FLAGS:= -D __FLOAT_MP__ 
+# REPR_FLAGS:= -D __CSTATE_VCHAR__
+LDFLAGS  := -Llocal/lib -lgmp -lgmpxx
 BUILD    := ./build
 OBJ_DIR  := $(BUILD)/objects
 APP_DIR  := $(BUILD)/apps
 SHELL	 := /bin/bash
 TARGET   := Feynman
-INCLUDE  := -IFeynman_MCSimulator/simulators/ -IFeynman_MCSimulator/ -I/Feynman_MCSimulator/pcg_random
+INCLUDE  := -IFeynman_MCSimulator/simulators/ -IFeynman_MCSimulator/ -IFeynman_MCSimulator/pcg_random/ -Ilocal/include
 SRC      :=                      \
    $(wildcard Feynman_MCSimulator/simulators/*.cpp) \
    $(wildcard Feynman_MCSimulator/*.cpp)         \
@@ -21,13 +23,13 @@ all:	build $(APP_DIR)/$(TARGET)
 $(OBJ_DIR)/%.o: %.cpp
 	@mkdir -p $(@D)
 	module load gcc-11.3 ; \
-	$(CXX) $(CXXFLAGS) $(FLOATFLAG) $(INCLUDE) -c $< -MMD -o $@
+	$(CXX) $(CXXFLAGS) $(REPR_FLAGS) $(INCLUDE) -c $< -MMD -o $@
 
 $(APP_DIR)/$(TARGET): $(OBJECTS)
 	@mkdir -p $(@D)
 	@cp Feynman_MCSimulator/*.sh $(APP_DIR)
 	module load gcc-11.3 ; \
-	$(CXX) $(CXXFLAGS) $(FLOATFLAG) -o $(APP_DIR)/$(TARGET) $^ $(LDFLAGS)
+	$(CXX) $(CXXFLAGS) $(REPR_FLAGS) -o $(APP_DIR)/$(TARGET) $^ $(LDFLAGS)
 
 -include $(DEPENDENCIES)
 

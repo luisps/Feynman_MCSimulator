@@ -211,6 +211,10 @@ bool IS_paths (TCircuit *c, CState init_state,
                         stat.sumI = sumI;
                         stat.n_samples = n_ProcessedSamples;
                         stat.n_Paths = n_ProcessedSamples;
+#ifdef NON_ZERO_PATHS
+                        stat.n_nonZero_paths = non_zero_paths;
+#endif
+
                         // https://www.geeksforgeeks.org/measure-execution-time-function-cpp/
                         auto time_now = high_resolution_clock::now();
                         auto duration = duration_cast<microseconds>(time_now - time_start);

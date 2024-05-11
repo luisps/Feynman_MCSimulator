@@ -390,7 +390,7 @@ static bool check_command_line(int argc, const char * argv[]) {
             case 's':
             {
                 samples_exp2 = atoi(argv[i+1]);
-                n_samples = ((SampleCounter)(1 << samples_exp2));
+                n_samples = ((SampleCounter)1) << samples_exp2;
                 fprintf (stdout, "Number of samples = 2^%d = ", samples_exp2);
                 fprintf (stdout, "%llu\n", n_samples);
                 break;

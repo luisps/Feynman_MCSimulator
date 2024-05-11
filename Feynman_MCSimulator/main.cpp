@@ -100,6 +100,8 @@ int main(int argc, const char * argv[]) {
     
     fprintf (stdout, "#different paths from PSI_0 to PSI_f = 2 ^ (%d * %d) = 2 ^ %d\n\n", circuit->size->num_qubits, circuit->size->num_layers-1, circuit->size->num_qubits*(circuit->size->num_layers-1));
         
+    fflush (stdout);
+
     bool ret;
     myReal estimateR, estimateI;
     bool CSV_found = false;
